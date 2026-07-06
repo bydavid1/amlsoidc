@@ -1,0 +1,385 @@
+// Bringo - schema de persistencia (detalle de infraestructura).
+// El dominio NO conoce este archivo: los repositorios mapean via mappers.
+// Diseño: docs/design/03-base-de-datos.md
+//
+// NOTA sobre unicidad parcial: `User.email` y "un solo Assignment activo por
+// Order" se refuerzan con INDICES UNICOS PARCIALES en SQL (no expresables en
+// Prisma). Ver prisma/migrations/*_init/migration.sql
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================= Identity & Access =============================
+
+model User {
+  id           String     @id @default(uuid())
+  // unicidad garantizada por indice parcial (WHERE "deletedAt" IS NULL)
+  email        String
+  passwordHash String
+  status       UserStatus @default(ACTIVE)
+  roles        UserRole[]
+
+  buyerProfile    BuyerProfile?
+  travelerProfile TravelerProfile?
+  refreshTokens   RefreshToken[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([email])
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum UserRole {
+  BUYER
+  TRAVELER
+  ADMIN
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  // se guarda el hash del token, nunca el token en claro
+  tokenHash String    @unique
+  // familia para rotacion + deteccion de reuso (robo de token)
+  familyId  String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+// ============================= Geography (catalogo) ==========================
+
+model Country {
+  id     String @id @default(uuid())
+  iso2   String @unique // "US", "SV"
+  name   String
+  cities City[]
+
+  @@map("countries")
+}
+
+model City {
+  id        String  @id @default(uuid())
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id])
+  name      String
+
+  @@unique([countryId, name])
+  @@map("cities")
+}
+
+// Corredores habilitados: abrir un corredor nuevo = insertar datos, no codigo
+model EnabledCorridor {
+  id                   String  @id @default(uuid())
+  originCountryId      String
+  destinationCountryId String
+  isActive             Boolean @default(true)
+
+  @@unique([originCountryId, destinationCountryId])
+  @@map("enabled_corridors")
+}
+
+// ================================== Trips ====================================
+
+model TravelerProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  // snapshot cacheado de reputacion (fuente de verdad: modulo reputation)
+  reputationScore Decimal @default(0) @db.Decimal(3, 2)
+  reputationCount Int     @default(0)
+
+  trips Trip[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("traveler_profiles")
+}
+
+model Trip {
+  id                String          @id @default(uuid())
+  travelerProfileId String
+  travelerProfile   TravelerProfile @relation(fields: [travelerProfileId], references: [id])
+
+  // corredor: referencias por id al catalogo geography (sin FK cross-module)
+  originCountryId      String
+  destinationCountryId String
+  destinationCityId    String?
+
+  arrivalDate       DateTime
+  totalCapacity     Int
+  remainingCapacity Int
+  status            TripStatus @default(DRAFT)
+
+  assignments Assignment[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // filtro duro del matching (H1-H4) como range-scan
+  @@index([originCountryId, destinationCountryId, arrivalDate, status])
+  @@map("trips")
+}
+
+enum TripStatus {
+  DRAFT
+  OPEN
+  IN_PROGRESS
+  CLOSED
+  CANCELLED
+}
+
+// ============================ Orders + Fulfillment ===========================
+
+model BuyerProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  orders Order[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("buyer_profiles")
+}
+
+model Order {
+  id             String       @id @default(uuid())
+  buyerProfileId String
+  buyerProfile   BuyerProfile @relation(fields: [buyerProfileId], references: [id])
+
+  // corredor solicitado (ids del catalogo geography)
+  originCountryId      String
+  destinationCountryId String
+  destinationCityId    String
+
+  productName            String
+  productUrl             String
+  estimatedPriceAmount   Decimal @db.Decimal(12, 2)
+  estimatedPriceCurrency String  @db.VarChar(3)
+  requiredCapacity       Int     @default(1)
+  neededBy               DateTime?
+
+  // NIVEL 1: backbone agnostico al tipo de Fulfillment.
+  // El sub-flujo (nivel 2) vive en Fulfillment.status.
+  status OrderStatus @default(PENDING_ASSIGNMENT)
+
+  fulfillment   Fulfillment?
+  assignments   Assignment[]
+  statusHistory OrderStatusHistory[]
+  ratings       Rating[]
+  dispute       Dispute?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // colas de operacion / re-matching por corredor
+  @@index([status, destinationCountryId])
+  @@index([buyerProfileId])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING_ASSIGNMENT
+  ASSIGNED
+  SOURCING
+  IN_TRANSIT
+  READY_FOR_DELIVERY
+  DELIVERED
+  COMPLETED
+  DELIVERY_FAILED
+  DISPUTED
+  CANCELLED
+  EXPIRED
+}
+
+// Fulfillment base + discriminador + tabla de detalle POR TIPO:
+// agregar un tipo nuevo = nueva tabla de detalle, sin ALTER de las existentes.
+model Fulfillment {
+  id      String          @id @default(uuid())
+  orderId String          @unique
+  order   Order           @relation(fields: [orderId], references: [id])
+  type    FulfillmentType
+  status  FulfillmentStatus
+
+  buyerShipsDetail FulfillmentBuyerShipsDetail?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fulfillments")
+}
+
+enum FulfillmentType {
+  BUYER_SHIPS_TO_TRAVELER
+  CUSTOMER_SHIPS_TO_TRAVELER
+  TRAVELER_PURCHASES_PRODUCT
+  WAREHOUSE_FULFILLMENT
+  LOCAL_INVENTORY
+}
+
+// Sub-flujo del MVP (BUYER_SHIPS_TO_TRAVELER)
+enum FulfillmentStatus {
+  AWAITING_PURCHASE
+  PURCHASED
+  RECEIVED_BY_TRAVELER
+}
+
+model FulfillmentBuyerShipsDetail {
+  id            String      @id @default(uuid())
+  fulfillmentId String      @unique
+  fulfillment   Fulfillment @relation(fields: [fulfillmentId], references: [id])
+
+  travelerAddressLine  String?
+  purchasedAt          DateTime?
+  receivedByTravelerAt DateTime?
+
+  @@map("fulfillment_buyer_ships_details")
+}
+
+// Proyeccion de historial (timeline + auditoria), alimentada por eventos
+model OrderStatusHistory {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id])
+  fromState  String?
+  toState    String
+  actor      String?
+  occurredAt DateTime @default(now())
+
+  @@index([orderId, occurredAt])
+  @@map("order_status_history")
+}
+
+// ================================= Matching ==================================
+
+model Assignment {
+  id                String           @id @default(uuid())
+  orderId           String
+  order             Order            @relation(fields: [orderId], references: [id])
+  tripId            String
+  trip              Trip             @relation(fields: [tripId], references: [id])
+  travelerProfileId String
+  status            AssignmentStatus @default(OFFERED)
+
+  // desglose auditable del score del matching (explicabilidad)
+  scoreBreakdown Json?
+
+  offeredAt   DateTime  @default(now())
+  respondedAt DateTime?
+  expiresAt   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // "un solo assignment activo por order" via indice unico parcial (migracion SQL)
+  @@index([orderId])
+  @@index([tripId])
+  @@index([travelerProfileId, orderId])
+  @@map("assignments")
+}
+
+enum AssignmentStatus {
+  OFFERED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+// ============================ Reputation / Incidents =========================
+
+model Rating {
+  id          String  @id @default(uuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id])
+  raterUserId String
+  rateeUserId String
+  score       Int // 1..5 (CHECK en migracion)
+  comment     String?
+
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  // una calificacion por parte y pedido
+  @@unique([orderId, raterUserId])
+  @@index([rateeUserId])
+  @@map("ratings")
+}
+
+model Dispute {
+  id      String        @id @default(uuid())
+  orderId String        @unique
+  order   Order         @relation(fields: [orderId], references: [id])
+  status  DisputeStatus @default(OPEN)
+  reason  String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("disputes")
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+// ========================= Notifications / Audit =============================
+
+model Notification {
+  id      String    @id @default(uuid())
+  userId  String
+  type    String
+  payload Json
+  readAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id          String  @id @default(uuid())
+  actorUserId String?
+  action      String
+  entity      String
+  entityId    String?
+  requestId   String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([actorUserId, createdAt])
+  @@map("audit_logs")
+}

@@ -1,0 +1,61 @@
+name: bringo
+
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    profiles: ["app"] # `docker compose --profile app up` para levantar la API en contenedor
+    env_file: .env
+    environment:
+      # dentro de la red de compose, la DB se resuelve por nombre de servicio
+      DATABASE_URL: postgresql://bringo:bringo@postgres:5432/bringo?schema=public
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: mailpit
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bringo
+      POSTGRES_PASSWORD: bringo
+      POSTGRES_DB: bringo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bringo -d bringo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    profiles: ["dev"] # solo desarrollo, nunca produccion
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@bringo.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-bringo-dev}
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # UI web
+
+volumes:
+  pgdata:
