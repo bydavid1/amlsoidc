@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { User } from '../domain/entities/user.entity';
+import { DomainError } from '../../../shared/domain/domain-error';
+import { User, UserRole } from '../domain/entities/user.entity';
 import { USER_REPOSITORY, UserRepository } from '../domain/repositories/user.repository';
 import { PASSWORD_HASHER, PasswordHasher } from '../domain/services/password-hasher';
 import { RegisterUserCommand, RegisterUserUseCase } from './use-cases/register-user.use-case';
@@ -35,6 +36,17 @@ export class IdentityAccessService {
     }
     const valid = await this.hasher.verify(user.passwordHash, password);
     return valid ? this.toView(user) : null;
+  }
+
+  /** Otorga un rol (activación de perfil Buyer/Traveler). Idempotente. */
+  async grantRole(userId: string, role: UserRole): Promise<AuthUserView> {
+    const user = await this.users.findById(userId);
+    if (!user) {
+      throw new DomainError('NOT_FOUND', 'User not found', 'NOT_FOUND');
+    }
+    user.addRole(role);
+    await this.users.save(user);
+    return this.toView(user);
   }
 
   private toView(user: User): AuthUserView {

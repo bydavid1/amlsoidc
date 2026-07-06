@@ -1,0 +1,48 @@
+import { forwardRef, Module } from '@nestjs/common';
+import { GeographyModule } from '../geography/geography.module';
+import { IdentityModule } from '../identity/identity.module';
+import { MatchingModule } from '../matching/matching.module';
+import { OrdersCoordinationService } from './application/orders-coordination.service';
+import {
+  ActivateBuyerProfileUseCase,
+  CancelOrderUseCase,
+  ConfirmDeliveryUseCase,
+  ConfirmPurchaseUseCase,
+  CreateOrderUseCase,
+  GetMyOrderUseCase,
+  ListMyOrdersUseCase,
+} from './application/use-cases/orders.use-cases';
+import {
+  BuyerShipsToTravelerStrategy,
+  FulfillmentStrategyResolver,
+} from './domain/fulfillment/fulfillment-strategy';
+import { BUYER_PROFILE_REPOSITORY } from './domain/repositories/buyer-profile.repository';
+import { ORDER_REPOSITORY } from './domain/repositories/order.repository';
+import { PrismaBuyerProfileRepository } from './infrastructure/persistence/prisma/prisma-buyer-profile.repository';
+import { PrismaOrderRepository } from './infrastructure/persistence/prisma/prisma-order.repository';
+import { BuyerProfileController } from './interface/http/controllers/buyer-profile.controller';
+import { OrdersController } from './interface/http/controllers/orders.controller';
+
+@Module({
+  imports: [GeographyModule, IdentityModule, forwardRef(() => MatchingModule)],
+  controllers: [OrdersController, BuyerProfileController],
+  providers: [
+    { provide: ORDER_REPOSITORY, useClass: PrismaOrderRepository },
+    { provide: BUYER_PROFILE_REPOSITORY, useClass: PrismaBuyerProfileRepository },
+    {
+      // composition root del Strategy: agregar un tipo = registrar aquí su clase
+      provide: FulfillmentStrategyResolver,
+      useFactory: () => new FulfillmentStrategyResolver([new BuyerShipsToTravelerStrategy()]),
+    },
+    OrdersCoordinationService,
+    ActivateBuyerProfileUseCase,
+    CreateOrderUseCase,
+    ConfirmPurchaseUseCase,
+    ConfirmDeliveryUseCase,
+    CancelOrderUseCase,
+    ListMyOrdersUseCase,
+    GetMyOrderUseCase,
+  ],
+  exports: [OrdersCoordinationService],
+})
+export class OrdersModule {}

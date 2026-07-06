@@ -1,5 +1,6 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
+import { CursorPage } from '../../shared/http/cursor-pagination';
 import { PaginatedResult } from '../../shared/http/paginated-result';
 
 interface RequestWithId {
@@ -24,6 +25,13 @@ export class ResponseEnvelopeInterceptor implements NestInterceptor {
             success: true,
             data: data.items,
             meta: { requestId, ...data.pagination },
+          };
+        }
+        if (data instanceof CursorPage) {
+          return {
+            success: true,
+            data: data.items,
+            meta: { requestId, nextCursor: data.nextCursor },
           };
         }
         return { success: true, data: data ?? null, meta: { requestId } };
