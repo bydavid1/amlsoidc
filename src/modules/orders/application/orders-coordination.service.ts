@@ -107,6 +107,40 @@ export class OrdersCoordinationService {
     return this.mutate(orderId, (order) => order.expire(this.clock.now()));
   }
 
+  /** Ambas partes calificaron: el ciclo cierra (reputation lo invoca). */
+  completeOrder(orderId: string, actor: string): Promise<void> {
+    return this.mutate(orderId, (order) => order.complete(actor, this.clock.now()));
+  }
+
+  /** report-issue (incidents lo invoca). */
+  disputeOrder(orderId: string, actor: string): Promise<void> {
+    return this.mutate(orderId, (order) => order.markDisputed(actor, this.clock.now()));
+  }
+
+  cancelFromDispute(orderId: string, actor: string): Promise<void> {
+    return this.mutate(orderId, (order) => order.cancelFromDispute(actor, this.clock.now()));
+  }
+
+  async resumeFromDispute(orderId: string, actor: string): Promise<void> {
+    const previous = await this.findStateBeforeDispute(orderId);
+    return this.mutate(orderId, (order) =>
+      order.resumeFromDispute(previous as OrderStatus, actor, this.clock.now()),
+    );
+  }
+
+  /** Estado del backbone previo a DISPUTED, leído del historial (proyección). */
+  private async findStateBeforeDispute(orderId: string): Promise<string> {
+    const row = await this.prisma.client.orderStatusHistory.findFirst({
+      where: { orderId, toState: 'DISPUTED' },
+      orderBy: { occurredAt: 'desc' },
+      select: { fromState: true },
+    });
+    if (!row?.fromState) {
+      throw new DomainError('DISPUTE_HISTORY_MISSING', 'No dispute transition found', 'CONFLICT');
+    }
+    return row.fromState;
+  }
+
   private async mutate(orderId: string, action: (order: Order) => void): Promise<void> {
     const order = await this.orders.findById(orderId);
     if (!order) {

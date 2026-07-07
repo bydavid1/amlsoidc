@@ -1,0 +1,91 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
+import {
+  AssignmentAcceptedEvent,
+  AssignmentOfferedEvent,
+} from '../../matching/domain/events/assignment.events';
+import { OrderStatusChangedEvent } from '../../orders/domain/events/order.events';
+import { OrdersCoordinationService } from '../../orders/application/orders-coordination.service';
+import { TripsCoordinationService } from '../../trips/application/trips-coordination.service';
+import { NotificationsService } from './notifications.service';
+
+/** Estados del pedido que ameritan avisar al Buyer. */
+const BUYER_RELEVANT = new Set([
+  'ASSIGNED',
+  'IN_TRANSIT',
+  'READY_FOR_DELIVERY',
+  'DELIVERED',
+  'COMPLETED',
+  'CANCELLED',
+  'EXPIRED',
+  'DISPUTED',
+]);
+
+/**
+ * Módulo 100% reactivo: nadie lo llama directamente; escucha eventos de
+ * dominio y persiste notificaciones (docs/design/02-arquitectura.md).
+ * Nunca lanza: perder una notificación no puede romper una transacción de negocio.
+ */
+@Injectable()
+export class NotificationsListener {
+  private readonly logger = new Logger(NotificationsListener.name);
+
+  constructor(
+    private readonly notifications: NotificationsService,
+    private readonly ordersCoordination: OrdersCoordinationService,
+    private readonly tripsCoordination: TripsCoordinationService,
+  ) {}
+
+  @OnEvent(AssignmentOfferedEvent.EVENT_NAME, { promisify: true })
+  async onOffered(event: AssignmentOfferedEvent): Promise<void> {
+    await this.safely(async () => {
+      const travelerUserId = await this.tripsCoordination.getTravelerUserId(
+        event.payload.travelerProfileId,
+      );
+      if (travelerUserId) {
+        await this.notifications.notify(travelerUserId, 'OFFER_RECEIVED', {
+          assignmentId: event.payload.assignmentId,
+          orderId: event.payload.orderId,
+          expiresAt: event.payload.expiresAt,
+        });
+      }
+    });
+  }
+
+  @OnEvent(AssignmentAcceptedEvent.EVENT_NAME, { promisify: true })
+  async onAccepted(event: AssignmentAcceptedEvent): Promise<void> {
+    await this.safely(async () => {
+      const order = await this.ordersCoordination.getMatchableOrder(event.payload.orderId);
+      if (order) {
+        await this.notifications.notify(order.buyerUserId, 'TRAVELER_ASSIGNED', {
+          orderId: event.payload.orderId,
+        });
+      }
+    });
+  }
+
+  @OnEvent(OrderStatusChangedEvent.EVENT_NAME, { promisify: true })
+  async onOrderStatusChanged(event: OrderStatusChangedEvent): Promise<void> {
+    if (!BUYER_RELEVANT.has(event.payload.to)) {
+      return;
+    }
+    await this.safely(async () => {
+      const order = await this.ordersCoordination.getMatchableOrder(event.payload.orderId);
+      if (order) {
+        await this.notifications.notify(order.buyerUserId, 'ORDER_STATUS_CHANGED', {
+          orderId: event.payload.orderId,
+          from: event.payload.from,
+          to: event.payload.to,
+        });
+      }
+    });
+  }
+
+  private async safely(work: () => Promise<void>): Promise<void> {
+    try {
+      await work();
+    } catch (error) {
+      this.logger.warn({ err: (error as Error).message }, 'Notification handler failed');
+    }
+  }
+}

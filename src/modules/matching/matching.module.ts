@@ -15,6 +15,7 @@ import {
   MatchingOrderAssignmentsAdapter,
   MatchingTripAssignmentsAdapter,
 } from './application/adapters/inverted-ports.adapters';
+import { MatchingReadService } from './application/matching-read.service';
 import { MatchingTriggersListener } from './application/matching-triggers.listener';
 import { AssignmentResponseService } from './application/use-cases/assignment-response.use-cases';
 import { RunMatchingForOrderUseCase } from './application/use-cases/run-matching-for-order.use-case';
@@ -55,11 +56,12 @@ import { AssignmentsController } from './interface/http/controllers/assignments.
     },
     RunMatchingForOrderUseCase,
     AssignmentResponseService,
+    MatchingReadService,
     MatchingTriggersListener,
     { provide: ORDER_ASSIGNMENTS_PORT, useClass: MatchingOrderAssignmentsAdapter },
     { provide: TRIP_ASSIGNMENTS_PORT, useClass: MatchingTripAssignmentsAdapter },
   ],
-  exports: [ORDER_ASSIGNMENTS_PORT, TRIP_ASSIGNMENTS_PORT],
+  exports: [ORDER_ASSIGNMENTS_PORT, TRIP_ASSIGNMENTS_PORT, MatchingReadService],
 })
 export class MatchingModule implements OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = new Logger(MatchingModule.name);

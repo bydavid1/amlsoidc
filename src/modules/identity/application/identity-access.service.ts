@@ -49,6 +49,29 @@ export class IdentityAccessService {
     return this.toView(user);
   }
 
+  /** Suspensión por Admin: bloquea toda acción transaccional al instante (guard relee de DB). */
+  async suspendUser(userId: string): Promise<AuthUserView> {
+    const user = await this.requireUser(userId);
+    user.suspend();
+    await this.users.save(user);
+    return this.toView(user);
+  }
+
+  async reactivateUser(userId: string): Promise<AuthUserView> {
+    const user = await this.requireUser(userId);
+    user.reactivate();
+    await this.users.save(user);
+    return this.toView(user);
+  }
+
+  private async requireUser(userId: string): Promise<User> {
+    const user = await this.users.findById(userId);
+    if (!user) {
+      throw new DomainError('NOT_FOUND', 'User not found', 'NOT_FOUND');
+    }
+    return user;
+  }
+
   private toView(user: User): AuthUserView {
     return { id: user.id, email: user.email, roles: user.roles, status: user.status };
   }

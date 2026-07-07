@@ -4,6 +4,7 @@
  * NUNCA cambiar código (docs/design/03-base-de-datos.md §8).
  */
 import { PrismaClient } from '@prisma/client';
+import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
 
@@ -53,8 +54,24 @@ async function main(): Promise<void> {
     },
   });
 
-   
-  console.log('Seed OK: US, SV, ciudades y corredor US->SV habilitado');
+  // Admin inicial (solo dev; en producción crear vía proceso seguro)
+  const adminEmail = 'admin@bringo.local';
+  const existingAdmin = await prisma.user.findFirst({
+    where: { email: adminEmail, deletedAt: null },
+  });
+  if (!existingAdmin) {
+    await prisma.user.create({
+      data: {
+        email: adminEmail,
+        passwordHash: await argon2.hash(process.env.SEED_ADMIN_PASSWORD ?? 'Admin-dev-123!', {
+          type: argon2.argon2id,
+        }),
+        roles: ['ADMIN'],
+      },
+    });
+  }
+
+  console.log('Seed OK: US, SV, ciudades, corredor US->SV y admin@bringo.local');
 }
 
 main()

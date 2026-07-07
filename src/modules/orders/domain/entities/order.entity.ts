@@ -156,6 +156,41 @@ export class Order extends AggregateRoot {
     this.toStatus('COMPLETED', actor, now);
   }
 
+  /** Cualquier parte reporta un problema: excepción recuperable (H8). */
+  markDisputed(actor: string, now: Date): void {
+    this.requireStatus(
+      ['ASSIGNED', 'SOURCING', 'IN_TRANSIT', 'READY_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED'],
+      'markDisputed',
+    );
+    this.toStatus('DISPUTED', actor, now);
+  }
+
+  /** Resolución de disputa por Admin: cancelar el pedido. */
+  cancelFromDispute(actor: string, now: Date): void {
+    this.requireStatus(['DISPUTED'], 'cancelFromDispute');
+    this.toStatus('CANCELLED', actor, now);
+  }
+
+  /** Resolución de disputa por Admin: retomar el estado previo (leído del historial). */
+  resumeFromDispute(previous: OrderStatus, actor: string, now: Date): void {
+    this.requireStatus(['DISPUTED'], 'resumeFromDispute');
+    const resumable: OrderStatus[] = [
+      'ASSIGNED',
+      'SOURCING',
+      'IN_TRANSIT',
+      'READY_FOR_DELIVERY',
+      'DELIVERED',
+    ];
+    if (!resumable.includes(previous)) {
+      throw new DomainError(
+        'INVALID_STATE_TRANSITION',
+        `Cannot resume a dispute into status ${previous}`,
+        'CONFLICT',
+      );
+    }
+    this.toStatus(previous, actor, now);
+  }
+
   /**
    * Cancelable solo antes de la compra (docs/design/01-dominio.md): en
    * PENDING_ASSIGNMENT siempre; con asignación, solo si aún no se compró.

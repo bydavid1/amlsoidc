@@ -2,6 +2,7 @@ import { forwardRef, Module } from '@nestjs/common';
 import { GeographyModule } from '../geography/geography.module';
 import { IdentityModule } from '../identity/identity.module';
 import { MatchingModule } from '../matching/matching.module';
+import { ReputationSnapshotListener } from './application/reputation-snapshot.listener';
 import { TripsCoordinationService } from './application/trips-coordination.service';
 import {
   ActivateTravelerProfileUseCase,
@@ -28,6 +29,7 @@ import { TripsController } from './interface/http/controllers/trips.controller';
     { provide: TRIP_REPOSITORY, useClass: PrismaTripRepository },
     { provide: TRAVELER_PROFILE_REPOSITORY, useClass: PrismaTravelerProfileRepository },
     TripsCoordinationService,
+    ReputationSnapshotListener,
     ActivateTravelerProfileUseCase,
     CreateTripUseCase,
     PublishTripUseCase,
