@@ -10,6 +10,12 @@ export interface AssignmentListRow {
   offeredAt: Date;
   expiresAt: Date;
   createdAt: Date;
+  // contexto del pedido: el Traveler decide su siguiente acción con esto
+  // (no puede leer GET /orders/:id, que es del Buyer)
+  productName: string;
+  destinationCityId: string;
+  orderStatus: string;
+  fulfillmentStatus: string | null;
 }
 
 export interface AssignmentRepository {

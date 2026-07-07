@@ -14,7 +14,7 @@ import { CurrentUser, Roles } from '../../../../../shared/auth/decorators';
 import { CursorPaginationDto } from '../../../../../shared/http/cursor-pagination';
 import { Assignment } from '../../../domain/entities/assignment.entity';
 import { AssignmentResponseService } from '../../../application/use-cases/assignment-response.use-cases';
-import { AssignmentResponseDto } from '../dto/assignments.dto';
+import { AssignmentListItemDto, AssignmentResponseDto } from '../dto/assignments.dto';
 
 function toDto(a: Assignment): AssignmentResponseDto {
   return {
@@ -41,7 +41,7 @@ export class AssignmentsController {
 
   @Get()
   @ApiOperation({ summary: 'Mis ofertas/asignaciones (más recientes primero)' })
-  @ApiOkResponse({ type: AssignmentResponseDto, isArray: true })
+  @ApiOkResponse({ type: AssignmentListItemDto, isArray: true })
   list(
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: CursorPaginationDto,

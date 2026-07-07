@@ -22,3 +22,18 @@ export class AssignmentResponseDto {
   @ApiProperty({ nullable: true })
   respondedAt: Date | null;
 }
+
+/** Fila del listado del Traveler: incluye el contexto del pedido que necesita para actuar. */
+export class AssignmentListItemDto extends AssignmentResponseDto {
+  @ApiProperty({ example: 'iPhone 15 Pro' })
+  productName: string;
+
+  @ApiProperty()
+  destinationCityId: string;
+
+  @ApiProperty({ example: 'SOURCING', description: 'Backbone del pedido' })
+  orderStatus: string;
+
+  @ApiProperty({ nullable: true, example: 'PURCHASED', description: 'Sub-flujo del Fulfillment' })
+  fulfillmentStatus: string | null;
+}

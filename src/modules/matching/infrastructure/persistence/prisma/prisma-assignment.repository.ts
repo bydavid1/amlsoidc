@@ -93,6 +93,16 @@ export class PrismaAssignmentRepository implements AssignmentRepository {
   async listByTraveler(travelerProfileId: string, limit: number): Promise<AssignmentListRow[]> {
     const rows = await this.prisma.client.assignment.findMany({
       where: { travelerProfileId },
+      include: {
+        order: {
+          select: {
+            productName: true,
+            destinationCityId: true,
+            status: true,
+            fulfillment: { select: { status: true } },
+          },
+        },
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit,
     });
@@ -104,6 +114,10 @@ export class PrismaAssignmentRepository implements AssignmentRepository {
       offeredAt: r.offeredAt,
       expiresAt: r.expiresAt,
       createdAt: r.createdAt,
+      productName: r.order.productName,
+      destinationCityId: r.order.destinationCityId,
+      orderStatus: r.order.status,
+      fulfillmentStatus: r.order.fulfillment?.status ?? null,
     }));
   }
 
