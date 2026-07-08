@@ -25,8 +25,6 @@ function toDto(trip: Trip): TripResponseDto {
     destinationCountryId: trip.destinationCountryId,
     destinationCityId: trip.destinationCityId,
     arrivalDate: trip.arrivalDate,
-    totalCapacity: trip.totalCapacity,
-    remainingCapacity: trip.remainingCapacity,
     status: trip.status,
   };
 }
@@ -56,7 +54,6 @@ export class TripsController {
       destinationCountryId: dto.destinationCountryId,
       destinationCityId: dto.destinationCityId ?? null,
       arrivalDate: dto.arrivalDate,
-      capacity: dto.capacity,
     });
     return toDto(trip);
   }

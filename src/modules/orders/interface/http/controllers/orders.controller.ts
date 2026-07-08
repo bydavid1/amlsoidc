@@ -70,7 +70,7 @@ export class OrdersController {
       productUrl: dto.productUrl,
       estimatedPriceAmount: dto.estimatedPriceAmount,
       estimatedPriceCurrency: dto.estimatedPriceCurrency,
-      requiredCapacity: dto.requiredCapacity ?? 1,
+      sizeCategory: dto.sizeCategory,
       neededBy: dto.neededBy ?? null,
     });
     return OrderResponseDto.from(order);

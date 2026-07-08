@@ -17,6 +17,12 @@ import { IdentityAccessService } from '../../../identity/application/identity-ac
 import { Order, OrderStatus } from '../../domain/entities/order.entity';
 import { FulfillmentStrategyResolver } from '../../domain/fulfillment/fulfillment-strategy';
 import {
+  calculateTravelerReward,
+  PRICING_CONFIG,
+  PricingConfig,
+  SizeCategory,
+} from '../../domain/services/pricing-policy';
+import {
   ORDER_ASSIGNMENTS_PORT,
   OrderAssignmentsPort,
 } from '../../domain/ports/order-assignments.port';
@@ -63,7 +69,7 @@ export interface CreateOrderCommand {
   productUrl: string;
   estimatedPriceAmount: number;
   estimatedPriceCurrency: string;
-  requiredCapacity: number;
+  sizeCategory: SizeCategory;
   neededBy: Date | null;
 }
 
@@ -74,6 +80,7 @@ export class CreateOrderUseCase {
     @Inject(BUYER_PROFILE_REPOSITORY) private readonly profiles: BuyerProfileRepository,
     @Inject(CORRIDOR_POLICY) private readonly corridors: CorridorPolicy,
     @Inject(GEOGRAPHY_REPOSITORY) private readonly geography: GeographyRepository,
+    @Inject(PRICING_CONFIG) private readonly pricing: PricingConfig,
     @Inject(EVENT_BUS) private readonly eventBus: EventBus,
     @Inject(ID_GENERATOR) private readonly ids: IdGenerator,
     @Inject(CLOCK) private readonly clock: Clock,
@@ -111,6 +118,12 @@ export class CreateOrderUseCase {
     }
 
     const now = this.clock.now();
+    // ganancia calculada a la creación y persistida (config posterior no la altera)
+    const reward = calculateTravelerReward(
+      command.estimatedPriceAmount,
+      command.sizeCategory,
+      this.pricing,
+    );
     const order = Order.create({
       id: this.ids.next(),
       buyerProfileId: profile.id,
@@ -122,7 +135,8 @@ export class CreateOrderUseCase {
       productUrl: command.productUrl,
       estimatedPriceAmount: command.estimatedPriceAmount,
       estimatedPriceCurrency: command.estimatedPriceCurrency,
-      requiredCapacity: command.requiredCapacity,
+      sizeCategory: command.sizeCategory,
+      travelerRewardAmount: reward.total,
       neededBy: command.neededBy,
       createdAt: now,
       now,

@@ -16,24 +16,10 @@ abstract class AssignmentEvent implements DomainEvent {
   ) {}
 }
 
-export class AssignmentOfferedEvent extends AssignmentEvent {
-  static readonly EVENT_NAME = 'matching.assignment.offered';
-  readonly name = AssignmentOfferedEvent.EVENT_NAME;
-}
-
+/** Emitido al reclamar (claim) un encargo. */
 export class AssignmentAcceptedEvent extends AssignmentEvent {
   static readonly EVENT_NAME = 'matching.assignment.accepted';
   readonly name = AssignmentAcceptedEvent.EVENT_NAME;
-}
-
-export class AssignmentRejectedEvent extends AssignmentEvent {
-  static readonly EVENT_NAME = 'matching.assignment.rejected';
-  readonly name = AssignmentRejectedEvent.EVENT_NAME;
-}
-
-export class AssignmentExpiredEvent extends AssignmentEvent {
-  static readonly EVENT_NAME = 'matching.assignment.expired';
-  readonly name = AssignmentExpiredEvent.EVENT_NAME;
 }
 
 export class AssignmentCancelledEvent extends AssignmentEvent {

@@ -55,7 +55,6 @@ export interface CreateTripCommand {
   destinationCountryId: string;
   destinationCityId: string | null;
   arrivalDate: Date;
-  capacity: number;
 }
 
 @Injectable()
@@ -90,7 +89,6 @@ export class CreateTripUseCase {
       destinationCountryId: command.destinationCountryId,
       destinationCityId: command.destinationCityId,
       arrivalDate: command.arrivalDate,
-      capacity: command.capacity,
       now: this.clock.now(),
     });
     await this.trips.save(trip);

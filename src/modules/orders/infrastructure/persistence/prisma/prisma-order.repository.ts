@@ -7,6 +7,7 @@ import {
   FulfillmentStatus,
   FulfillmentType,
 } from '../../../domain/fulfillment/fulfillment-strategy';
+import { SizeCategory } from '../../../domain/services/pricing-policy';
 import {
   OrderListRow,
   OrderRepository,
@@ -30,7 +31,8 @@ function toDomain(row: OrderWithRelations): Order {
     productUrl: row.productUrl,
     estimatedPriceAmount: Number(row.estimatedPriceAmount),
     estimatedPriceCurrency: row.estimatedPriceCurrency,
-    requiredCapacity: row.requiredCapacity,
+    sizeCategory: row.sizeCategory as SizeCategory,
+    travelerRewardAmount: Number(row.travelerRewardAmount),
     neededBy: row.neededBy,
     status: row.status as OrderStatus,
     fulfillment: row.fulfillment
@@ -66,7 +68,8 @@ export class PrismaOrderRepository implements OrderRepository {
       productUrl: order.productUrl,
       estimatedPriceAmount: order.estimatedPriceAmount,
       estimatedPriceCurrency: order.estimatedPriceCurrency,
-      requiredCapacity: order.requiredCapacity,
+      sizeCategory: order.sizeCategory,
+      travelerRewardAmount: order.travelerRewardAmount,
       neededBy: order.neededBy,
       status: order.status,
     };

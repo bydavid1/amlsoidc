@@ -16,8 +16,6 @@ function toDomain(row: PrismaTrip): Trip {
     destinationCountryId: row.destinationCountryId,
     destinationCityId: row.destinationCityId,
     arrivalDate: row.arrivalDate,
-    totalCapacity: row.totalCapacity,
-    remainingCapacity: row.remainingCapacity,
     status: row.status as TripStatus,
   });
 }
@@ -38,8 +36,6 @@ export class PrismaTripRepository implements TripRepository {
       destinationCountryId: trip.destinationCountryId,
       destinationCityId: trip.destinationCityId,
       arrivalDate: trip.arrivalDate,
-      totalCapacity: trip.totalCapacity,
-      remainingCapacity: trip.remainingCapacity,
       status: trip.status,
     };
     await this.prisma.client.trip.upsert({
@@ -78,8 +74,6 @@ export class PrismaTripRepository implements TripRepository {
       destinationCountryId: r.destinationCountryId,
       destinationCityId: r.destinationCityId,
       arrivalDate: r.arrivalDate,
-      totalCapacity: r.totalCapacity,
-      remainingCapacity: r.remainingCapacity,
       status: r.status as TripStatus,
       createdAt: r.createdAt,
     }));

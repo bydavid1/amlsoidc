@@ -22,7 +22,12 @@ export interface MatchableOrderView {
   buyerUserId: string;
   originCountryId: string;
   destinationCountryId: string;
-  requiredCapacity: number;
+  destinationCityId: string;
+  productName: string;
+  sizeCategory: string;
+  estimatedPriceAmount: number;
+  estimatedPriceCurrency: string;
+  travelerRewardAmount: number;
   neededBy: Date | null;
   status: OrderStatus;
   createdAt: Date;
@@ -66,7 +71,12 @@ export class OrdersCoordinationService {
       buyerUserId: r.buyerProfile.userId,
       originCountryId: r.originCountryId,
       destinationCountryId: r.destinationCountryId,
-      requiredCapacity: r.requiredCapacity,
+      destinationCityId: r.destinationCityId,
+      productName: r.productName,
+      sizeCategory: r.sizeCategory,
+      estimatedPriceAmount: Number(r.estimatedPriceAmount),
+      estimatedPriceCurrency: r.estimatedPriceCurrency,
+      travelerRewardAmount: Number(r.travelerRewardAmount),
       neededBy: r.neededBy,
       status: r.status as OrderStatus,
       createdAt: r.createdAt,
@@ -165,7 +175,12 @@ export class OrdersCoordinationService {
       buyerUserId: order.buyerUserId,
       originCountryId: order.originCountryId,
       destinationCountryId: order.destinationCountryId,
-      requiredCapacity: order.requiredCapacity,
+      destinationCityId: order.destinationCityId,
+      productName: order.productName,
+      sizeCategory: order.sizeCategory,
+      estimatedPriceAmount: order.estimatedPriceAmount,
+      estimatedPriceCurrency: order.estimatedPriceCurrency,
+      travelerRewardAmount: order.travelerRewardAmount,
       neededBy: order.neededBy,
       status: order.status,
       createdAt: order.createdAt,

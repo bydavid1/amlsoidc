@@ -127,10 +127,8 @@ model Trip {
   destinationCountryId String
   destinationCityId    String?
 
-  arrivalDate       DateTime
-  totalCapacity     Int
-  remainingCapacity Int
-  status            TripStatus @default(DRAFT)
+  arrivalDate DateTime
+  status      TripStatus @default(DRAFT)
 
   assignments Assignment[]
 
@@ -181,7 +179,10 @@ model Order {
   productUrl             String
   estimatedPriceAmount   Decimal @db.Decimal(12, 2)
   estimatedPriceCurrency String  @db.VarChar(3)
-  requiredCapacity       Int     @default(1)
+  // tamaño declarado por el Buyer: alimenta el pricing y el juicio del viajero
+  sizeCategory           SizeCategory @default(MEDIUM)
+  // ganancia del viajero calculada por PricingPolicy AL CREAR (config posterior no la altera)
+  travelerRewardAmount   Decimal @default(0) @db.Decimal(12, 2)
   neededBy               DateTime?
 
   // NIVEL 1: backbone agnostico al tipo de Fulfillment.
@@ -202,6 +203,12 @@ model Order {
   @@index([status, destinationCountryId])
   @@index([buyerProfileId])
   @@map("orders")
+}
+
+enum SizeCategory {
+  SMALL
+  MEDIUM
+  LARGE
 }
 
 enum OrderStatus {
@@ -292,7 +299,8 @@ model Assignment {
 
   offeredAt   DateTime  @default(now())
   respondedAt DateTime?
-  expiresAt   DateTime
+  // nullable: en el modelo claim ya no hay ventana de aceptación
+  expiresAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

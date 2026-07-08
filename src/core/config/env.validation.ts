@@ -70,69 +70,38 @@ export class EnvironmentVariables {
   @IsInt()
   SMTP_PORT?: number;
 
-  // ------------------- Matching (docs/design/06-matching.md §8) -------------------
+  // ------- Pricing del viajero (docs/design/09-modelo-claim-y-pricing.md §4) -------
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  @Max(5)
-  MATCH_REPUTATION_MIN: number = 0;
-
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  @Max(5)
-  MATCH_REPUTATION_COLD_START: number = 3.5;
+  PRICING_BASE_FEE: number = 5;
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Max(1)
-  MATCH_W_TIME: number = 0.35;
+  PRICING_VALUE_RATE: number = 0.05;
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  @Max(1)
-  MATCH_W_REPUTATION: number = 0.3;
+  PRICING_VALUE_CAP: number = 1500;
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  @Max(1)
-  MATCH_W_CAPACITY: number = 0.15;
+  PRICING_SIZE_FEE_SMALL: number = 3;
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  @Max(1)
-  MATCH_W_FAIRNESS: number = 0.15;
+  PRICING_SIZE_FEE_MEDIUM: number = 8;
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  @Max(1)
-  MATCH_W_LOAD: number = 0.05;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  MATCH_ACCEPTANCE_WINDOW_MINUTES: number = 30;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  MATCH_MAX_REASSIGN_ATTEMPTS: number = 5;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  MATCH_MAX_CANDIDATES: number = 20;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  MATCH_MAX_PARALLEL_PER_TRAVELER: number = 3;
+  PRICING_SIZE_FEE_LARGE: number = 15;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {
@@ -147,18 +116,6 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
       .map((e) => `${e.property}: ${Object.values(e.constraints ?? {}).join(', ')}`)
       .join(' | ');
     throw new Error(`Configuración inválida (fail-fast): ${detail}`);
-  }
-
-  const weightSum =
-    validated.MATCH_W_TIME +
-    validated.MATCH_W_REPUTATION +
-    validated.MATCH_W_CAPACITY +
-    validated.MATCH_W_FAIRNESS +
-    validated.MATCH_W_LOAD;
-  if (Math.abs(weightSum - 1) > 1e-6) {
-    throw new Error(
-      `Configuración inválida: los pesos MATCH_W_* deben sumar 1 (suman ${weightSum})`,
-    );
   }
 
   return validated;

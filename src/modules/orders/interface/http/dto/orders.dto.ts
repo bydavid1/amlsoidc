@@ -3,14 +3,14 @@ import { Type } from 'class-transformer';
 import {
   IsDate,
   IsEnum,
-  IsInt,
+
   IsISO4217CurrencyCode,
   IsNumber,
   IsOptional,
   IsString,
   IsUrl,
   IsUUID,
-  Max,
+
   MaxLength,
   Min,
   MinLength,
@@ -18,6 +18,7 @@ import {
 import { CursorPaginationDto } from '../../../../../shared/http/cursor-pagination';
 import { Order, OrderStatus } from '../../../domain/entities/order.entity';
 import { StatusHistoryRow } from '../../../domain/repositories/order.repository';
+import { SizeCategory } from '../../../domain/services/pricing-policy';
 
 export class CreateOrderDto {
   @ApiProperty({ description: 'País donde se comprará (id del catálogo)' })
@@ -52,12 +53,13 @@ export class CreateOrderDto {
   @IsISO4217CurrencyCode()
   estimatedPriceCurrency: string;
 
-  @ApiPropertyOptional({ example: 1, default: 1, minimum: 1, maximum: 10 })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(10)
-  requiredCapacity?: number;
+  @ApiProperty({
+    enum: ['SMALL', 'MEDIUM', 'LARGE'],
+    example: 'MEDIUM',
+    description: 'Tamaño del artículo: alimenta el pricing y el juicio del viajero',
+  })
+  @IsEnum(['SMALL', 'MEDIUM', 'LARGE'])
+  sizeCategory: SizeCategory;
 
   @ApiPropertyOptional({ example: '2026-09-01T00:00:00.000Z', description: 'Fecha límite deseada' })
   @IsOptional()
@@ -117,6 +119,12 @@ export class OrderResponseDto {
   @ApiProperty({ example: 'USD' })
   estimatedPriceCurrency: string;
 
+  @ApiProperty({ enum: ['SMALL', 'MEDIUM', 'LARGE'], example: 'MEDIUM' })
+  sizeCategory: string;
+
+  @ApiProperty({ example: 67.95, description: 'Ganancia del viajero (fijada al crear)' })
+  travelerRewardAmount: number;
+
   @ApiProperty()
   originCountryId: string;
 
@@ -145,6 +153,8 @@ export class OrderResponseDto {
     dto.productUrl = order.productUrl;
     dto.estimatedPriceAmount = order.estimatedPriceAmount;
     dto.estimatedPriceCurrency = order.estimatedPriceCurrency;
+    dto.sizeCategory = order.sizeCategory;
+    dto.travelerRewardAmount = order.travelerRewardAmount;
     dto.originCountryId = order.originCountryId;
     dto.destinationCountryId = order.destinationCountryId;
     dto.destinationCityId = order.destinationCityId;

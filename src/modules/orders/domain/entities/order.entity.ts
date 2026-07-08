@@ -6,6 +6,7 @@ import {
   FulfillmentStrategy,
   FulfillmentType,
 } from '../fulfillment/fulfillment-strategy';
+import { SizeCategory } from '../services/pricing-policy';
 
 /** NIVEL 1: backbone agnóstico al tipo de Fulfillment (docs/design/01-dominio.md §5). */
 export type OrderStatus =
@@ -44,7 +45,8 @@ export interface OrderProps {
   productUrl: string;
   estimatedPriceAmount: number;
   estimatedPriceCurrency: string;
-  requiredCapacity: number;
+  sizeCategory: SizeCategory;
+  travelerRewardAmount: number;
   neededBy: Date | null;
   status: OrderStatus;
   fulfillment: FulfillmentState | null;
@@ -68,8 +70,8 @@ export class Order extends AggregateRoot {
     if (input.estimatedPriceAmount < 0) {
       throw new DomainError('ORDER_PRICE_INVALID', 'Price must be >= 0', 'UNPROCESSABLE');
     }
-    if (!Number.isInteger(input.requiredCapacity) || input.requiredCapacity < 1) {
-      throw new DomainError('ORDER_CAPACITY_INVALID', 'Capacity must be >= 1', 'UNPROCESSABLE');
+    if (input.travelerRewardAmount < 0) {
+      throw new DomainError('ORDER_REWARD_INVALID', 'Reward must be >= 0', 'UNPROCESSABLE');
     }
     const { now, ...props } = input;
     const order = new Order({ ...props, status: 'PENDING_ASSIGNMENT', fulfillment: null });
@@ -312,8 +314,11 @@ export class Order extends AggregateRoot {
   get estimatedPriceCurrency(): string {
     return this.props.estimatedPriceCurrency;
   }
-  get requiredCapacity(): number {
-    return this.props.requiredCapacity;
+  get sizeCategory(): SizeCategory {
+    return this.props.sizeCategory;
+  }
+  get travelerRewardAmount(): number {
+    return this.props.travelerRewardAmount;
   }
   get neededBy(): Date | null {
     return this.props.neededBy;

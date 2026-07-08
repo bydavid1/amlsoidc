@@ -1,12 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import {
-  AssignmentAcceptedEvent,
-  AssignmentOfferedEvent,
-} from '../../matching/domain/events/assignment.events';
+import { AssignmentAcceptedEvent } from '../../matching/domain/events/assignment.events';
 import { OrderStatusChangedEvent } from '../../orders/domain/events/order.events';
 import { OrdersCoordinationService } from '../../orders/application/orders-coordination.service';
-import { TripsCoordinationService } from '../../trips/application/trips-coordination.service';
 import { NotificationsService } from './notifications.service';
 
 /** Estados del pedido que ameritan avisar al Buyer. */
@@ -33,25 +29,9 @@ export class NotificationsListener {
   constructor(
     private readonly notifications: NotificationsService,
     private readonly ordersCoordination: OrdersCoordinationService,
-    private readonly tripsCoordination: TripsCoordinationService,
   ) {}
 
-  @OnEvent(AssignmentOfferedEvent.EVENT_NAME, { promisify: true })
-  async onOffered(event: AssignmentOfferedEvent): Promise<void> {
-    await this.safely(async () => {
-      const travelerUserId = await this.tripsCoordination.getTravelerUserId(
-        event.payload.travelerProfileId,
-      );
-      if (travelerUserId) {
-        await this.notifications.notify(travelerUserId, 'OFFER_RECEIVED', {
-          assignmentId: event.payload.assignmentId,
-          orderId: event.payload.orderId,
-          expiresAt: event.payload.expiresAt,
-        });
-      }
-    });
-  }
-
+  /** Un viajero reclamó el encargo → avisar al Buyer. */
   @OnEvent(AssignmentAcceptedEvent.EVENT_NAME, { promisify: true })
   async onAccepted(event: AssignmentAcceptedEvent): Promise<void> {
     await this.safely(async () => {

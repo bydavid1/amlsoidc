@@ -8,11 +8,12 @@ export interface AssignmentListRow {
   tripId: string;
   status: string;
   offeredAt: Date;
-  expiresAt: Date;
+  respondedAt: Date | null;
   createdAt: Date;
   // contexto del pedido: el Traveler decide su siguiente acción con esto
-  // (no puede leer GET /orders/:id, que es del Buyer)
   productName: string;
+  sizeCategory: string;
+  travelerRewardAmount: number;
   destinationCityId: string;
   orderStatus: string;
   fulfillmentStatus: string | null;
@@ -20,13 +21,13 @@ export interface AssignmentListRow {
 
 export interface AssignmentRepository {
   findById(id: string): Promise<Assignment | null>;
+  /**
+   * Persiste el assignment. Si otro claim activo ya existe para la Order,
+   * lanza DomainError('ORDER_ALREADY_TAKEN') — el índice único parcial en DB
+   * es la fuente de verdad ante la carrera.
+   */
   save(assignment: Assignment): Promise<void>;
   findActiveByOrder(orderId: string): Promise<Assignment | null>;
   findActiveByTrip(tripId: string): Promise<Assignment[]>;
-  countForOrder(orderId: string): Promise<number>;
-  /** Travelers que ya recibieron una oferta de este pedido (filtro H8: no re-ofrecer). */
-  travelerProfileIdsForOrder(orderId: string): Promise<string[]>;
-  countActiveByTraveler(travelerProfileIds: string[]): Promise<Map<string, number>>;
   listByTraveler(travelerProfileId: string, limit: number): Promise<AssignmentListRow[]>;
-  findExpiredOffers(now: Date, limit: number): Promise<Assignment[]>;
 }

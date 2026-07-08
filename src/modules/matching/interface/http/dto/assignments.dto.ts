@@ -10,14 +10,14 @@ export class AssignmentResponseDto {
   @ApiProperty()
   tripId: string;
 
-  @ApiProperty({ enum: ['OFFERED', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'CANCELLED'] })
+  @ApiProperty({ enum: ['ACCEPTED', 'CANCELLED'], example: 'ACCEPTED' })
   status: string;
 
   @ApiProperty()
   offeredAt: Date;
 
-  @ApiProperty({ description: 'Vencimiento de la ventana de aceptación' })
-  expiresAt: Date;
+  @ApiProperty({ nullable: true, description: 'Sin uso en el modelo claim (histórico)' })
+  expiresAt: Date | null;
 
   @ApiProperty({ nullable: true })
   respondedAt: Date | null;
@@ -27,6 +27,12 @@ export class AssignmentResponseDto {
 export class AssignmentListItemDto extends AssignmentResponseDto {
   @ApiProperty({ example: 'iPhone 15 Pro' })
   productName: string;
+
+  @ApiProperty({ enum: ['SMALL', 'MEDIUM', 'LARGE'], example: 'MEDIUM' })
+  sizeCategory: string;
+
+  @ApiProperty({ example: 67.95, description: 'Ganancia del viajero por este encargo' })
+  travelerRewardAmount: number;
 
   @ApiProperty()
   destinationCityId: string;

@@ -5,9 +5,6 @@ import { PrismaService } from '../../../core/prisma/prisma.service';
 import {
   AssignmentAcceptedEvent,
   AssignmentCancelledEvent,
-  AssignmentExpiredEvent,
-  AssignmentOfferedEvent,
-  AssignmentRejectedEvent,
 } from '../../matching/domain/events/assignment.events';
 import { OrderStatusChangedEvent } from '../../orders/domain/events/order.events';
 
@@ -40,24 +37,9 @@ export class AuditListener {
     });
   }
 
-  @OnEvent(AssignmentOfferedEvent.EVENT_NAME, { promisify: true })
-  onOffered(event: AssignmentOfferedEvent): Promise<void> {
-    return this.assignmentEvent('ASSIGNMENT_OFFERED', event.payload);
-  }
-
   @OnEvent(AssignmentAcceptedEvent.EVENT_NAME, { promisify: true })
   onAccepted(event: AssignmentAcceptedEvent): Promise<void> {
-    return this.assignmentEvent('ASSIGNMENT_ACCEPTED', event.payload);
-  }
-
-  @OnEvent(AssignmentRejectedEvent.EVENT_NAME, { promisify: true })
-  onRejected(event: AssignmentRejectedEvent): Promise<void> {
-    return this.assignmentEvent('ASSIGNMENT_REJECTED', event.payload);
-  }
-
-  @OnEvent(AssignmentExpiredEvent.EVENT_NAME, { promisify: true })
-  onExpired(event: AssignmentExpiredEvent): Promise<void> {
-    return this.assignmentEvent('ASSIGNMENT_EXPIRED', event.payload);
+    return this.assignmentEvent('ASSIGNMENT_CLAIMED', event.payload);
   }
 
   @OnEvent(AssignmentCancelledEvent.EVENT_NAME, { promisify: true })

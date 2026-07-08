@@ -11,15 +11,13 @@ export interface TripProps {
   destinationCountryId: string;
   destinationCityId: string | null;
   arrivalDate: Date;
-  totalCapacity: number;
-  remainingCapacity: number;
   status: TripStatus;
 }
 
 /**
- * Agregado Trip. Invariantes: capacidad > 0; nunca se reserva por encima de
- * remainingCapacity; solo un Trip OPEN acepta carga (docs/design/01-dominio.md).
- * La reserva de capacidad se refuerza además con decremento atómico en DB.
+ * Agregado Trip: solo ruta + fecha (docs/design/09-modelo-claim-y-pricing.md).
+ * La capacidad numérica desapareció del modelo: "si cabe o no" lo juzga el
+ * viajero encargo por encargo al reclamar.
  */
 export class Trip extends AggregateRoot {
   private constructor(private readonly props: TripProps) {
@@ -33,12 +31,8 @@ export class Trip extends AggregateRoot {
     destinationCountryId: string;
     destinationCityId: string | null;
     arrivalDate: Date;
-    capacity: number;
     now: Date;
   }): Trip {
-    if (!Number.isInteger(input.capacity) || input.capacity < 1) {
-      throw new DomainError('TRIP_CAPACITY_INVALID', 'Capacity must be >= 1', 'UNPROCESSABLE');
-    }
     if (input.arrivalDate.getTime() <= input.now.getTime()) {
       throw new DomainError(
         'TRIP_ARRIVAL_IN_PAST',
@@ -53,8 +47,6 @@ export class Trip extends AggregateRoot {
       destinationCountryId: input.destinationCountryId,
       destinationCityId: input.destinationCityId,
       arrivalDate: input.arrivalDate,
-      totalCapacity: input.capacity,
-      remainingCapacity: input.capacity,
       status: 'DRAFT',
     });
   }
@@ -112,12 +104,6 @@ export class Trip extends AggregateRoot {
   }
   get arrivalDate(): Date {
     return this.props.arrivalDate;
-  }
-  get totalCapacity(): number {
-    return this.props.totalCapacity;
-  }
-  get remainingCapacity(): number {
-    return this.props.remainingCapacity;
   }
   get status(): TripStatus {
     return this.props.status;

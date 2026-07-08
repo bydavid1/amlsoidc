@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDate, IsEnum, IsInt, IsOptional, IsUUID, Max, Min, MinDate } from 'class-validator';
+import { IsDate, IsEnum, IsOptional, IsUUID, MinDate } from 'class-validator';
 import { CursorPaginationDto } from '../../../../../shared/http/cursor-pagination';
 import { TripStatus } from '../../../domain/entities/trip.entity';
 
@@ -23,12 +23,6 @@ export class CreateTripDto {
   @IsDate()
   @MinDate(() => new Date(), { message: 'arrivalDate must be in the future' })
   arrivalDate: Date;
-
-  @ApiProperty({ example: 3, minimum: 1, maximum: 50, description: 'Pedidos que puede llevar' })
-  @IsInt()
-  @Min(1)
-  @Max(50)
-  capacity: number;
 }
 
 const TRIP_STATUSES: TripStatus[] = ['DRAFT', 'OPEN', 'IN_PROGRESS', 'CLOSED', 'CANCELLED'];
@@ -55,12 +49,6 @@ export class TripResponseDto {
 
   @ApiProperty({ example: '2026-08-15T00:00:00.000Z' })
   arrivalDate: Date;
-
-  @ApiProperty({ example: 3 })
-  totalCapacity: number;
-
-  @ApiProperty({ example: 2 })
-  remainingCapacity: number;
 
   @ApiProperty({ enum: TRIP_STATUSES, example: 'OPEN' })
   status: TripStatus;

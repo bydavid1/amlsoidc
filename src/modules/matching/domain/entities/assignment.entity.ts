@@ -3,11 +3,13 @@ import { DomainError } from '../../../../shared/domain/domain-error';
 import {
   AssignmentAcceptedEvent,
   AssignmentCancelledEvent,
-  AssignmentExpiredEvent,
-  AssignmentOfferedEvent,
-  AssignmentRejectedEvent,
 } from '../events/assignment.events';
 
+/**
+ * OFFERED/REJECTED/EXPIRED pertenecen al modelo anterior de ofertas; se
+ * conservan en el tipo por el historial en DB, pero ya no se producen
+ * (docs/design/09-modelo-claim-y-pricing.md).
+ */
 export type AssignmentStatus = 'OFFERED' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED';
 
 export interface AssignmentProps {
@@ -19,49 +21,47 @@ export interface AssignmentProps {
   scoreBreakdown: Record<string, number> | null;
   offeredAt: Date;
   respondedAt: Date | null;
-  expiresAt: Date;
+  expiresAt: Date | null;
   createdAt: Date;
 }
 
 /**
- * Agregado Assignment: resultado del matching con ciclo
- * OFFERED → ACCEPTED | REJECTED | EXPIRED | CANCELLED
- * (docs/design/06-matching.md §4). La invariante "una sola asignación activa
- * por pedido" se refuerza además con índice único parcial en DB.
+ * Agregado Assignment en el modelo CLAIM: el Traveler reclama un encargo
+ * disponible y nace directamente ACCEPTED. La invariante "una sola asignación
+ * activa por pedido" la refuerza el índice único parcial en DB (el primer
+ * claim gana; el segundo recibe 409).
  */
 export class Assignment extends AggregateRoot {
   private constructor(private readonly props: AssignmentProps) {
     super();
   }
 
-  static offer(input: {
+  /** El Traveler reclama el encargo para su viaje. */
+  static claim(input: {
     id: string;
     orderId: string;
     tripId: string;
     travelerProfileId: string;
-    scoreBreakdown: Record<string, number>;
     now: Date;
-    expiresAt: Date;
   }): Assignment {
     const assignment = new Assignment({
       id: input.id,
       orderId: input.orderId,
       tripId: input.tripId,
       travelerProfileId: input.travelerProfileId,
-      status: 'OFFERED',
-      scoreBreakdown: input.scoreBreakdown,
+      status: 'ACCEPTED',
+      scoreBreakdown: null,
       offeredAt: input.now,
-      respondedAt: null,
-      expiresAt: input.expiresAt,
+      respondedAt: input.now,
+      expiresAt: null,
       createdAt: input.now,
     });
     assignment.record(
-      new AssignmentOfferedEvent(input.now, {
+      new AssignmentAcceptedEvent(input.now, {
         assignmentId: input.id,
         orderId: input.orderId,
         tripId: input.tripId,
         travelerProfileId: input.travelerProfileId,
-        expiresAt: input.expiresAt.toISOString(),
       }),
     );
     return assignment;
@@ -71,36 +71,9 @@ export class Assignment extends AggregateRoot {
     return new Assignment(props);
   }
 
-  isExpired(now: Date): boolean {
-    return this.props.status === 'OFFERED' && this.props.expiresAt.getTime() < now.getTime();
-  }
-
-  accept(now: Date): void {
-    this.requireOffered('accept');
-    if (this.isExpired(now)) {
-      throw new DomainError('ASSIGNMENT_EXPIRED', 'The offer has expired', 'CONFLICT');
-    }
-    this.props.status = 'ACCEPTED';
-    this.props.respondedAt = now;
-    this.record(new AssignmentAcceptedEvent(now, this.ids()));
-  }
-
-  reject(now: Date): void {
-    this.requireOffered('reject');
-    this.props.status = 'REJECTED';
-    this.props.respondedAt = now;
-    this.record(new AssignmentRejectedEvent(now, this.ids()));
-  }
-
-  expire(now: Date): void {
-    this.requireOffered('expire');
-    this.props.status = 'EXPIRED';
-    this.props.respondedAt = now;
-    this.record(new AssignmentExpiredEvent(now, this.ids()));
-  }
-
+  /** Cancelación cruzada (pedido cancelado por el Buyer / viaje cancelado). */
   cancel(now: Date): void {
-    if (this.props.status !== 'OFFERED' && this.props.status !== 'ACCEPTED') {
+    if (this.props.status !== 'ACCEPTED' && this.props.status !== 'OFFERED') {
       throw new DomainError(
         'INVALID_STATE_TRANSITION',
         `Cannot cancel an assignment in status ${this.props.status}`,
@@ -109,26 +82,14 @@ export class Assignment extends AggregateRoot {
     }
     this.props.status = 'CANCELLED';
     this.props.respondedAt = now;
-    this.record(new AssignmentCancelledEvent(now, this.ids()));
-  }
-
-  private requireOffered(action: string): void {
-    if (this.props.status !== 'OFFERED') {
-      throw new DomainError(
-        'INVALID_STATE_TRANSITION',
-        `Cannot ${action} an assignment in status ${this.props.status}`,
-        'CONFLICT',
-      );
-    }
-  }
-
-  private ids(): { assignmentId: string; orderId: string; tripId: string; travelerProfileId: string } {
-    return {
-      assignmentId: this.props.id,
-      orderId: this.props.orderId,
-      tripId: this.props.tripId,
-      travelerProfileId: this.props.travelerProfileId,
-    };
+    this.record(
+      new AssignmentCancelledEvent(now, {
+        assignmentId: this.props.id,
+        orderId: this.props.orderId,
+        tripId: this.props.tripId,
+        travelerProfileId: this.props.travelerProfileId,
+      }),
+    );
   }
 
   get id(): string {
@@ -155,7 +116,7 @@ export class Assignment extends AggregateRoot {
   get respondedAt(): Date | null {
     return this.props.respondedAt;
   }
-  get expiresAt(): Date {
+  get expiresAt(): Date | null {
     return this.props.expiresAt;
   }
   get createdAt(): Date {

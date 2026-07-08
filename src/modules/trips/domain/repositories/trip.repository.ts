@@ -9,8 +9,6 @@ export interface TripListRow {
   destinationCountryId: string;
   destinationCityId: string | null;
   arrivalDate: Date;
-  totalCapacity: number;
-  remainingCapacity: number;
   status: TripStatus;
   createdAt: Date;
 }
