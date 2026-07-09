@@ -46,6 +46,7 @@ import { PricingController } from './interface/http/controllers/pricing.controll
           MEDIUM: config.get('PRICING_SIZE_FEE_MEDIUM', { infer: true }),
           LARGE: config.get('PRICING_SIZE_FEE_LARGE', { infer: true }),
         },
+        platformRate: config.get('PRICING_PLATFORM_RATE', { infer: true }),
       }),
     },
     {

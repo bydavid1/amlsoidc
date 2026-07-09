@@ -4,9 +4,9 @@ import { Type } from 'class-transformer';
 import { IsEnum, IsNumber, Min } from 'class-validator';
 import { Public } from '../../../../../shared/auth/decorators';
 import {
-  calculateTravelerReward,
   PRICING_CONFIG,
   PricingConfig,
+  quotePricing,
   SIZE_CATEGORIES,
   SizeCategory,
 } from '../../../domain/services/pricing-policy';
@@ -23,20 +23,18 @@ class PricingQuoteQueryDto {
   size: SizeCategory;
 }
 
-class PricingQuoteResponseDto {
-  @ApiProperty({ example: 67.95 })
-  total: number;
-
+class PublicQuoteResponseDto {
   @ApiProperty({
-    example: { baseFee: 5, valueComponent: 54.95, sizeComponent: 8 },
-    description: 'Desglose transparente del cálculo',
+    example: 1181.53,
+    description: 'Total aproximado a pagar (producto + servicio), sin desglose',
   })
-  breakdown: { baseFee: number; valueComponent: number; sizeComponent: number };
+  estimatedTotal: number;
 }
 
 /**
- * Cotización pública de la ganancia del viajero: el formulario del Buyer la
- * previsualiza en vivo. Misma fórmula que fija el reward al crear el pedido.
+ * Cotización PÚBLICA para el Buyer: SOLO el total aproximado
+ * (docs/design/09 — el split viajero/plataforma es dato interno y nunca
+ * se expone en superficies públicas).
  */
 @ApiTags('Orders')
 @Controller('pricing')
@@ -45,9 +43,10 @@ export class PricingController {
 
   @Get('quote')
   @Public()
-  @ApiOperation({ summary: 'Cotizar la ganancia del viajero para un precio + tamaño' })
-  @ApiOkResponse({ type: PricingQuoteResponseDto })
-  quote(@Query() query: PricingQuoteQueryDto): PricingQuoteResponseDto {
-    return calculateTravelerReward(query.price, query.size, this.pricing);
+  @ApiOperation({ summary: 'Total aproximado a pagar por un pedido (precio + tamaño)' })
+  @ApiOkResponse({ type: PublicQuoteResponseDto })
+  quote(@Query() query: PricingQuoteQueryDto): PublicQuoteResponseDto {
+    const quote = quotePricing(query.price, query.size, this.pricing);
+    return { estimatedTotal: quote.estimatedTotal };
   }
 }

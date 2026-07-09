@@ -19,6 +19,7 @@ function createOrder(): Order {
     estimatedPriceCurrency: 'USD',
     sizeCategory: 'MEDIUM' as const,
     travelerRewardAmount: 67.95,
+    platformFeeAmount: 13.59,
     neededBy: null,
     createdAt: now,
     now,

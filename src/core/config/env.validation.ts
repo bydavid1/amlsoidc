@@ -102,6 +102,13 @@ export class EnvironmentVariables {
   @IsNumber()
   @Min(0)
   PRICING_SIZE_FEE_LARGE: number = 15;
+
+  /** Comisión de Bringo sobre el pago al viajero (ganancia de la plataforma). */
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  PRICING_PLATFORM_RATE: number = 0.2;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

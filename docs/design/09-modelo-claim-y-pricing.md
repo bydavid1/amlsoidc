@@ -56,13 +56,26 @@ Determinista, transparente y **configurable por entorno** (cambiar la política
 comercial = cambiar config, no desplegar):
 
 ```
-reward = BASE_FEE
-       + VALUE_RATE × min(estimatedPrice, VALUE_CAP)
-       + SIZE_FEE[sizeCategory]
+travelerReward = BASE_FEE + VALUE_RATE × min(estimatedPrice, VALUE_CAP) + SIZE_FEE[tamaño]
+platformFee    = PLATFORM_RATE × travelerReward     ← ganancia de Bringo
+serviceTotal   = travelerReward + platformFee
+estimatedTotal = estimatedPrice + serviceTotal      ← lo que paga el Buyer
 ```
 
 Defaults: `BASE_FEE=5 USD` · `VALUE_RATE=5%` · `VALUE_CAP=1500` ·
-`SIZE_FEE: S=3, M=8, L=15`.
+`SIZE_FEE: S=3, M=8, L=15` · `PLATFORM_RATE=20%`.
+
+**Visibilidad del dinero (regla de negocio):**
+
+| Actor | Ve |
+|---|---|
+| Buyer | SOLO `estimatedTotal` (sin desglose del servicio) |
+| Traveler | SOLO `travelerReward` (su pago) |
+| Admin | Desglose completo: precio + reward + comisión + total |
+
+El split viajero/plataforma es dato interno: ni el quote público
+(`GET /pricing/quote` → solo `estimatedTotal`) ni los DTOs de Buyer/Traveler
+lo exponen. El desglose vive únicamente en `GET /admin/orders`.
 
 | Ejemplo | Cálculo | Ganancia |
 |---|---|---|

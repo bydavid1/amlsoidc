@@ -17,9 +17,9 @@ import { IdentityAccessService } from '../../../identity/application/identity-ac
 import { Order, OrderStatus } from '../../domain/entities/order.entity';
 import { FulfillmentStrategyResolver } from '../../domain/fulfillment/fulfillment-strategy';
 import {
-  calculateTravelerReward,
   PRICING_CONFIG,
   PricingConfig,
+  quotePricing,
   SizeCategory,
 } from '../../domain/services/pricing-policy';
 import {
@@ -118,8 +118,8 @@ export class CreateOrderUseCase {
     }
 
     const now = this.clock.now();
-    // ganancia calculada a la creación y persistida (config posterior no la altera)
-    const reward = calculateTravelerReward(
+    // pricing calculado a la creación y persistido (config posterior no lo altera)
+    const quote = quotePricing(
       command.estimatedPriceAmount,
       command.sizeCategory,
       this.pricing,
@@ -136,7 +136,8 @@ export class CreateOrderUseCase {
       estimatedPriceAmount: command.estimatedPriceAmount,
       estimatedPriceCurrency: command.estimatedPriceCurrency,
       sizeCategory: command.sizeCategory,
-      travelerRewardAmount: reward.total,
+      travelerRewardAmount: quote.travelerReward,
+      platformFeeAmount: quote.platformFee,
       neededBy: command.neededBy,
       createdAt: now,
       now,

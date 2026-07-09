@@ -122,8 +122,12 @@ export class OrderResponseDto {
   @ApiProperty({ enum: ['SMALL', 'MEDIUM', 'LARGE'], example: 'MEDIUM' })
   sizeCategory: string;
 
-  @ApiProperty({ example: 67.95, description: 'Ganancia del viajero (fijada al crear)' })
-  travelerRewardAmount: number;
+  @ApiProperty({
+    example: 1181.53,
+    description:
+      'Total aproximado que pagará el Buyer (producto + servicio). El desglose del servicio es dato interno.',
+  })
+  estimatedTotalAmount: number;
 
   @ApiProperty()
   originCountryId: string;
@@ -154,7 +158,8 @@ export class OrderResponseDto {
     dto.estimatedPriceAmount = order.estimatedPriceAmount;
     dto.estimatedPriceCurrency = order.estimatedPriceCurrency;
     dto.sizeCategory = order.sizeCategory;
-    dto.travelerRewardAmount = order.travelerRewardAmount;
+    // VISIBILIDAD: el Buyer solo ve el total; el split viajero/plataforma es interno
+    dto.estimatedTotalAmount = order.estimatedTotalAmount;
     dto.originCountryId = order.originCountryId;
     dto.destinationCountryId = order.destinationCountryId;
     dto.destinationCityId = order.destinationCityId;

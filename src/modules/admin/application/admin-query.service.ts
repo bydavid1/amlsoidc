@@ -10,6 +10,13 @@ export interface AdminOrderRow {
   originCountryId: string;
   destinationCountryId: string;
   createdAt: Date;
+  // desglose COMPLETO del dinero — solo visible para admin
+  // (docs/design/09: el Buyer ve solo el total; el Traveler solo su pago)
+  sizeCategory: string;
+  estimatedPriceAmount: number;
+  travelerRewardAmount: number;
+  platformFeeAmount: number;
+  buyerTotalAmount: number;
 }
 
 /**
@@ -34,15 +41,25 @@ export class AdminQueryService {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit,
     });
-    return rows.map((r) => ({
-      id: r.id,
-      status: r.status,
-      fulfillmentStatus: r.fulfillment?.status ?? null,
-      productName: r.productName,
-      buyerEmail: r.buyerProfile.user.email,
-      originCountryId: r.originCountryId,
-      destinationCountryId: r.destinationCountryId,
-      createdAt: r.createdAt,
-    }));
+    return rows.map((r) => {
+      const price = Number(r.estimatedPriceAmount);
+      const reward = Number(r.travelerRewardAmount);
+      const fee = Number(r.platformFeeAmount);
+      return {
+        id: r.id,
+        status: r.status,
+        fulfillmentStatus: r.fulfillment?.status ?? null,
+        productName: r.productName,
+        buyerEmail: r.buyerProfile.user.email,
+        originCountryId: r.originCountryId,
+        destinationCountryId: r.destinationCountryId,
+        createdAt: r.createdAt,
+        sizeCategory: r.sizeCategory,
+        estimatedPriceAmount: price,
+        travelerRewardAmount: reward,
+        platformFeeAmount: fee,
+        buyerTotalAmount: Math.round((price + reward + fee) * 100) / 100,
+      };
+    });
   }
 }

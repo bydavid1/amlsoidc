@@ -47,6 +47,7 @@ export interface OrderProps {
   estimatedPriceCurrency: string;
   sizeCategory: SizeCategory;
   travelerRewardAmount: number;
+  platformFeeAmount: number;
   neededBy: Date | null;
   status: OrderStatus;
   fulfillment: FulfillmentState | null;
@@ -319,6 +320,20 @@ export class Order extends AggregateRoot {
   }
   get travelerRewardAmount(): number {
     return this.props.travelerRewardAmount;
+  }
+  get platformFeeAmount(): number {
+    return this.props.platformFeeAmount;
+  }
+  /** Total aproximado que paga el Buyer (única cifra que él ve). */
+  get estimatedTotalAmount(): number {
+    return (
+      Math.round(
+        (this.props.estimatedPriceAmount +
+          this.props.travelerRewardAmount +
+          this.props.platformFeeAmount) *
+          100,
+      ) / 100
+    );
   }
   get neededBy(): Date | null {
     return this.props.neededBy;

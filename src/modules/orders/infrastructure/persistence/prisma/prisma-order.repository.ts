@@ -33,6 +33,7 @@ function toDomain(row: OrderWithRelations): Order {
     estimatedPriceCurrency: row.estimatedPriceCurrency,
     sizeCategory: row.sizeCategory as SizeCategory,
     travelerRewardAmount: Number(row.travelerRewardAmount),
+    platformFeeAmount: Number(row.platformFeeAmount),
     neededBy: row.neededBy,
     status: row.status as OrderStatus,
     fulfillment: row.fulfillment
@@ -70,6 +71,7 @@ export class PrismaOrderRepository implements OrderRepository {
       estimatedPriceCurrency: order.estimatedPriceCurrency,
       sizeCategory: order.sizeCategory,
       travelerRewardAmount: order.travelerRewardAmount,
+      platformFeeAmount: order.platformFeeAmount,
       neededBy: order.neededBy,
       status: order.status,
     };

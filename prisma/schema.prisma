@@ -181,8 +181,11 @@ model Order {
   estimatedPriceCurrency String  @db.VarChar(3)
   // tamaño declarado por el Buyer: alimenta el pricing y el juicio del viajero
   sizeCategory           SizeCategory @default(MEDIUM)
-  // ganancia del viajero calculada por PricingPolicy AL CREAR (config posterior no la altera)
+  // pricing calculado por PricingPolicy AL CREAR (config posterior no lo altera).
+  // travelerReward = pago al viajero; platformFee = ganancia de Bringo.
+  // VISIBILIDAD: el Buyer solo ve el total; el split es dato interno (admin).
   travelerRewardAmount   Decimal @default(0) @db.Decimal(12, 2)
+  platformFeeAmount      Decimal @default(0) @db.Decimal(12, 2)
   neededBy               DateTime?
 
   // NIVEL 1: backbone agnostico al tipo de Fulfillment.
