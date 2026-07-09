@@ -7,7 +7,9 @@ import { TripsCoordinationService } from './application/trips-coordination.servi
 import {
   ActivateTravelerProfileUseCase,
   CancelTripUseCase,
+  CloseTripUseCase,
   CreateTripUseCase,
+  GetMyTripUseCase,
   ListMyTripsUseCase,
   PublishTripUseCase,
 } from './application/use-cases/trips.use-cases';
@@ -33,8 +35,10 @@ import { TripsController } from './interface/http/controllers/trips.controller';
     ActivateTravelerProfileUseCase,
     CreateTripUseCase,
     PublishTripUseCase,
+    CloseTripUseCase,
     CancelTripUseCase,
     ListMyTripsUseCase,
+    GetMyTripUseCase,
   ],
   exports: [TripsCoordinationService, TRAVELER_PROFILE_REPOSITORY],
 })

@@ -10,6 +10,8 @@ export interface OrderListRow {
   destinationCountryId: string;
   status: OrderStatus;
   fulfillmentStatus: string | null;
+  sizeCategory: string;
+  estimatedTotalAmount: number;
   createdAt: Date;
 }
 

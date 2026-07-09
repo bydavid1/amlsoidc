@@ -1,6 +1,6 @@
 import { AggregateRoot } from '../../../../shared/domain/aggregate-root';
 import { DomainError } from '../../../../shared/domain/domain-error';
-import { TripCancelledEvent, TripPublishedEvent } from '../events/trip.events';
+import { TripCancelledEvent, TripClosedEvent, TripPublishedEvent } from '../events/trip.events';
 
 export type TripStatus = 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'CLOSED' | 'CANCELLED';
 
@@ -73,6 +73,23 @@ export class Trip extends AggregateRoot {
         arrivalDate: this.props.arrivalDate.toISOString(),
       }),
     );
+  }
+
+  /**
+   * CERRAR ≠ cancelar: el viajero ya tomó los encargos que va a llevar.
+   * Un viaje CLOSED no recibe claims nuevos, pero sus encargos activos
+   * siguen su curso normal hasta la entrega.
+   */
+  close(now: Date): void {
+    if (this.props.status !== 'OPEN') {
+      throw new DomainError(
+        'INVALID_STATE_TRANSITION',
+        `Cannot close a trip in status ${this.props.status}`,
+        'CONFLICT',
+      );
+    }
+    this.props.status = 'CLOSED';
+    this.record(new TripClosedEvent(now, { tripId: this.props.id }));
   }
 
   cancel(now: Date): void {

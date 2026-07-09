@@ -63,6 +63,6 @@ import { PricingController } from './interface/http/controllers/pricing.controll
     ListMyOrdersUseCase,
     GetMyOrderUseCase,
   ],
-  exports: [OrdersCoordinationService],
+  exports: [OrdersCoordinationService, PRICING_CONFIG],
 })
 export class OrdersModule {}

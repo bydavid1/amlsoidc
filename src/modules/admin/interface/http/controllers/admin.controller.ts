@@ -16,7 +16,24 @@ import {
   ApiPropertyOptional,
   ApiTags,
 } from '@nestjs/swagger';
-import { IsEnum, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  IsUUID,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
+import {
+  CatalogService,
+  CreateRecommendedProductInput,
+} from '../../../../catalog/application/catalog.service';
+import { SizeCategory } from '../../../../orders/domain/services/pricing-policy';
 import { AuthenticatedUser } from '../../../../../shared/auth/authenticated-user';
 import { CurrentUser, Roles } from '../../../../../shared/auth/decorators';
 import { CursorPaginationDto } from '../../../../../shared/http/cursor-pagination';
@@ -41,6 +58,43 @@ class AdminListDisputesQueryDto extends CursorPaginationDto {
   @IsOptional()
   @IsEnum(['OPEN', 'UNDER_REVIEW', 'RESOLVED', 'REJECTED'])
   status?: DisputeStatus;
+}
+
+class CreateRecommendedProductDto implements CreateRecommendedProductInput {
+  @ApiProperty({ example: 'iPhone 15 Pro 256GB' })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(200)
+  name: string;
+
+  @ApiProperty({ example: 'https://www.apple.com/shop/buy-iphone' })
+  @IsUrl({ require_protocol: true })
+  productUrl: string;
+
+  @ApiPropertyOptional({ example: 'https://.../iphone.jpg' })
+  @IsOptional()
+  @IsUrl({ require_protocol: true })
+  imageUrl?: string;
+
+  @ApiProperty({ example: 1099.99, minimum: 0 })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  estimatedPriceAmount: number;
+
+  @ApiProperty({ enum: ['SMALL', 'MEDIUM', 'LARGE'] })
+  @IsEnum(['SMALL', 'MEDIUM', 'LARGE'])
+  sizeCategory: SizeCategory;
+
+  @ApiProperty({ description: 'País de compra (id del catálogo geography)' })
+  @IsUUID()
+  originCountryId: string;
+
+  @ApiPropertyOptional({ default: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  sortOrder?: number;
 }
 
 class ResolveDisputeDto {
@@ -70,7 +124,24 @@ export class AdminController {
     private readonly identityAccess: IdentityAccessService,
     private readonly resolveDispute: ResolveDisputeUseCase,
     private readonly listDisputes: ListDisputesUseCase,
+    private readonly catalog: CatalogService,
   ) {}
+
+  @Post('recommended-products')
+  @ApiOperation({ summary: 'Publicar un producto recomendado (curaduría)' })
+  createRecommendedProduct(@Body() dto: CreateRecommendedProductDto): Promise<{ id: string }> {
+    return this.catalog.create(dto);
+  }
+
+  @Post('recommended-products/:id/deactivate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Retirar un producto recomendado' })
+  async deactivateRecommendedProduct(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ ok: true }> {
+    await this.catalog.deactivate(id);
+    return { ok: true };
+  }
 
   @Get('orders')
   @ApiOperation({ summary: 'Todos los pedidos (panel de operación)' })

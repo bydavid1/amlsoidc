@@ -364,6 +364,29 @@ enum DisputeStatus {
   REJECTED
 }
 
+// ============================ Catalog (curaduría) ============================
+
+// Productos recomendados que Bringo publica para inspirar al Buyer.
+// Los administra el equipo (admin); el Buyer los ve y "los pide" con un clic.
+model RecommendedProduct {
+  id                     String       @id @default(uuid())
+  name                   String
+  productUrl             String
+  imageUrl               String?
+  estimatedPriceAmount   Decimal      @db.Decimal(12, 2)
+  estimatedPriceCurrency String       @default("USD") @db.VarChar(3)
+  sizeCategory           SizeCategory
+  originCountryId        String
+  isActive               Boolean      @default(true)
+  sortOrder              Int          @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("recommended_products")
+}
+
 // ========================= Notifications / Audit =============================
 
 model Notification {

@@ -128,6 +128,37 @@ export class PublishTripUseCase {
 }
 
 @Injectable()
+export class CloseTripUseCase {
+  constructor(
+    @Inject(TRIP_REPOSITORY) private readonly trips: TripRepository,
+    @Inject(TRAVELER_PROFILE_REPOSITORY) private readonly profiles: TravelerProfileRepository,
+    @Inject(EVENT_BUS) private readonly eventBus: EventBus,
+    @Inject(CLOCK) private readonly clock: Clock,
+  ) {}
+
+  /** Cerrar ≠ cancelar: deja de recibir claims; los encargos activos siguen. */
+  async execute(userId: string, tripId: string): Promise<Trip> {
+    const trip = await loadOwnedTrip(this.trips, this.profiles, userId, tripId);
+    trip.close(this.clock.now());
+    await this.trips.save(trip);
+    await this.eventBus.publishAll(trip.pullDomainEvents());
+    return trip;
+  }
+}
+
+@Injectable()
+export class GetMyTripUseCase {
+  constructor(
+    @Inject(TRIP_REPOSITORY) private readonly trips: TripRepository,
+    @Inject(TRAVELER_PROFILE_REPOSITORY) private readonly profiles: TravelerProfileRepository,
+  ) {}
+
+  execute(userId: string, tripId: string): Promise<Trip> {
+    return loadOwnedTrip(this.trips, this.profiles, userId, tripId);
+  }
+}
+
+@Injectable()
 export class CancelTripUseCase {
   constructor(
     @Inject(TRIP_REPOSITORY) private readonly trips: TripRepository,

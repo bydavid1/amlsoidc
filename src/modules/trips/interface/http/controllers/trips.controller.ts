@@ -12,7 +12,9 @@ import { CursorPage, decodeCursor } from '../../../../../shared/http/cursor-pagi
 import { Trip } from '../../../domain/entities/trip.entity';
 import {
   CancelTripUseCase,
+  CloseTripUseCase,
   CreateTripUseCase,
+  GetMyTripUseCase,
   ListMyTripsUseCase,
   PublishTripUseCase,
 } from '../../../application/use-cases/trips.use-cases';
@@ -37,9 +39,34 @@ export class TripsController {
   constructor(
     private readonly createTrip: CreateTripUseCase,
     private readonly publishTrip: PublishTripUseCase,
+    private readonly closeTrip: CloseTripUseCase,
     private readonly cancelTrip: CancelTripUseCase,
     private readonly listMyTrips: ListMyTripsUseCase,
+    private readonly getMyTrip: GetMyTripUseCase,
   ) {}
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Detalle de MI viaje' })
+  @ApiOkResponse({ type: TripResponseDto })
+  async detail(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) tripId: string,
+  ): Promise<TripResponseDto> {
+    return toDto(await this.getMyTrip.execute(user.id, tripId));
+  }
+
+  @Post(':id/close')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cerrar viaje: ya tomé mis encargos, no quiero ver más disponibles (≠ cancelar)',
+  })
+  @ApiOkResponse({ type: TripResponseDto })
+  async close(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) tripId: string,
+  ): Promise<TripResponseDto> {
+    return toDto(await this.closeTrip.execute(user.id, tripId));
+  }
 
   @Post()
   @ApiOperation({ summary: 'Crear viaje (queda en DRAFT hasta publicarlo)' })

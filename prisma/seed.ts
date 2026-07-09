@@ -71,7 +71,64 @@ async function main(): Promise<void> {
     });
   }
 
-  console.log('Seed OK: US, SV, ciudades, corredor US->SV y admin@bringo.local');
+  // Productos recomendados iniciales (curaduría de Bringo)
+  const existingProducts = await prisma.recommendedProduct.count();
+  if (existingProducts === 0) {
+    await prisma.recommendedProduct.createMany({
+      data: [
+        {
+          name: 'iPhone 15 Pro 256GB',
+          productUrl: 'https://www.apple.com/shop/buy-iphone/iphone-15-pro',
+          estimatedPriceAmount: 1099.0,
+          sizeCategory: 'MEDIUM',
+          originCountryId: us.id,
+          sortOrder: 1,
+        },
+        {
+          name: 'AirPods Pro (2.ª gen)',
+          productUrl: 'https://www.apple.com/shop/product/airpods-pro',
+          estimatedPriceAmount: 249.0,
+          sizeCategory: 'SMALL',
+          originCountryId: us.id,
+          sortOrder: 2,
+        },
+        {
+          name: 'PlayStation 5 Slim',
+          productUrl: 'https://direct.playstation.com/en-us/buy-consoles/ps5',
+          estimatedPriceAmount: 499.99,
+          sizeCategory: 'LARGE',
+          originCountryId: us.id,
+          sortOrder: 3,
+        },
+        {
+          name: 'Nintendo Switch OLED',
+          productUrl: 'https://www.nintendo.com/us/switch/oled-model/',
+          estimatedPriceAmount: 349.99,
+          sizeCategory: 'MEDIUM',
+          originCountryId: us.id,
+          sortOrder: 4,
+        },
+        {
+          name: 'Kindle Paperwhite',
+          productUrl: 'https://www.amazon.com/dp/B08KTZ8249',
+          estimatedPriceAmount: 149.99,
+          sizeCategory: 'SMALL',
+          originCountryId: us.id,
+          sortOrder: 5,
+        },
+        {
+          name: 'MacBook Air M3 13"',
+          productUrl: 'https://www.apple.com/shop/buy-mac/macbook-air',
+          estimatedPriceAmount: 1099.0,
+          sizeCategory: 'LARGE',
+          originCountryId: us.id,
+          sortOrder: 6,
+        },
+      ],
+    });
+  }
+
+  console.log('Seed OK: US, SV, ciudades, corredor US->SV, admin y productos recomendados');
 }
 
 main()

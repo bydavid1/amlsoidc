@@ -143,6 +143,14 @@ export class PrismaOrderRepository implements OrderRepository {
       destinationCountryId: r.destinationCountryId,
       status: r.status as OrderStatus,
       fulfillmentStatus: r.fulfillment?.status ?? null,
+      sizeCategory: r.sizeCategory,
+      estimatedTotalAmount:
+        Math.round(
+          (Number(r.estimatedPriceAmount) +
+            Number(r.travelerRewardAmount) +
+            Number(r.platformFeeAmount)) *
+            100,
+        ) / 100,
       createdAt: r.createdAt,
     }));
   }

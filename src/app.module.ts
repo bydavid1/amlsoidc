@@ -3,6 +3,7 @@ import { CoreModule } from './core/core.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
 import { GeographyModule } from './modules/geography/geography.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { IncidentsModule } from './modules/incidents/incidents.module';
@@ -20,6 +21,7 @@ import { TripsModule } from './modules/trips/trips.module';
     AuthModule,
     TripsModule,
     OrdersModule,
+    CatalogModule,
     MatchingModule,
     ReputationModule,
     IncidentsModule,
