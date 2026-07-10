@@ -42,4 +42,7 @@ export class AssignmentListItemDto extends AssignmentResponseDto {
 
   @ApiProperty({ nullable: true, example: 'PURCHASED', description: 'Sub-flujo del Fulfillment' })
   fulfillmentStatus: string | null;
+
+  @ApiProperty({ description: 'El buyer ya pagó el servicio a Bringo' })
+  servicePaid: boolean;
 }

@@ -368,6 +368,47 @@ enum DisputeStatus {
   REJECTED
 }
 
+// ================================ Payments ===================================
+
+// Cobro del SERVICIO (reward + comisión) por pedido. El producto lo compra el
+// buyer directo en la tienda. Payout del viajero: manual (piloto), liberado
+// al confirmar recepción en hub (docs/design/10-pagos.md).
+model ServicePayment {
+  id          String        @id @default(uuid())
+  orderId     String        @unique
+  amount      Decimal       @db.Decimal(12, 2)
+  currency    String        @default("USD") @db.VarChar(3)
+  status      PaymentStatus @default(PENDING)
+  provider    String
+  providerRef String?       @unique
+  paidAt      DateTime?
+
+  payoutStatus PayoutStatus @default(NOT_DUE)
+  payoutAt     DateTime?
+  refundedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([payoutStatus])
+  @@map("service_payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUND_DUE
+  REFUNDED
+}
+
+enum PayoutStatus {
+  NOT_DUE
+  DUE
+  PAID_OUT
+}
+
 // ============================ Catalog (curaduría) ============================
 
 // Productos recomendados que Bringo publica para inspirar al Buyer.

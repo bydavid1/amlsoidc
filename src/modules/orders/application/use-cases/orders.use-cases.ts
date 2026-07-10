@@ -31,6 +31,10 @@ import {
   OrderAssignmentsPort,
 } from '../../domain/ports/order-assignments.port';
 import {
+  PAYMENT_STATUS_PORT,
+  PaymentStatusPort,
+} from '../../domain/ports/payment-status.port';
+import {
   BUYER_PROFILE_REPOSITORY,
   BuyerProfileRepository,
   BuyerProfileView,
@@ -168,6 +172,7 @@ export class CreateOrderUseCase {
 export class ConfirmPurchaseUseCase {
   constructor(
     @Inject(ORDER_REPOSITORY) private readonly orders: OrderRepository,
+    @Inject(PAYMENT_STATUS_PORT) private readonly paymentStatus: PaymentStatusPort,
     @Inject(EVENT_BUS) private readonly eventBus: EventBus,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly strategies: FulfillmentStrategyResolver,
@@ -178,6 +183,14 @@ export class ConfirmPurchaseUseCase {
     const f = order.fulfillment;
     if (!f) {
       throw new DomainError('FULFILLMENT_MISSING', 'Order has no fulfillment yet', 'CONFLICT');
+    }
+    // gate de pagos (docs/design/10-pagos.md §3): el servicio se paga antes de comprar
+    if (!(await this.paymentStatus.isServicePaid(orderId))) {
+      throw new DomainError(
+        'PAYMENT_REQUIRED',
+        'Pay the Bringo service before confirming the purchase',
+        'CONFLICT',
+      );
     }
     order.confirmPurchase(this.strategies.resolve(f.type), `buyer:${userId}`, this.clock.now());
     await this.orders.save(order);

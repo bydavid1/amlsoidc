@@ -4,6 +4,7 @@ import { EnvironmentVariables } from '../../core/config/env.validation';
 import { GeographyModule } from '../geography/geography.module';
 import { IdentityModule } from '../identity/identity.module';
 import { MatchingModule } from '../matching/matching.module';
+import { PaymentsModule } from '../payments/payments.module';
 import { OrdersCoordinationService } from './application/orders-coordination.service';
 import {
   ActivateBuyerProfileUseCase,
@@ -28,7 +29,12 @@ import { OrdersController } from './interface/http/controllers/orders.controller
 import { PricingController } from './interface/http/controllers/pricing.controller';
 
 @Module({
-  imports: [GeographyModule, IdentityModule, forwardRef(() => MatchingModule)],
+  imports: [
+    GeographyModule,
+    IdentityModule,
+    forwardRef(() => MatchingModule),
+    forwardRef(() => PaymentsModule),
+  ],
   controllers: [OrdersController, BuyerProfileController, PricingController],
   providers: [
     { provide: ORDER_REPOSITORY, useClass: PrismaOrderRepository },

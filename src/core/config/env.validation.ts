@@ -109,6 +109,24 @@ export class EnvironmentVariables {
   @Min(0)
   @Max(1)
   PRICING_PLATFORM_RATE: number = 0.2;
+
+  // ------------- Pagos (docs/design/10-pagos.md) -------------
+
+  /** Si true, confirm-purchase exige el servicio pagado (PAYMENT_REQUIRED). */
+  @Type(() => Boolean)
+  @IsBoolean()
+  PAYMENTS_REQUIRED: boolean = true;
+
+  @IsString()
+  PAYMENTS_PROVIDER: string = 'sandbox';
+
+  @IsString()
+  @MinLength(8)
+  PAYMENTS_SANDBOX_SECRET: string = 'sandbox-dev-secret';
+
+  /** Base del frontend (retorno del checkout). */
+  @IsString()
+  FRONTEND_URL: string = 'http://localhost:3100';
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

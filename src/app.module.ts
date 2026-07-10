@@ -10,6 +10,7 @@ import { IncidentsModule } from './modules/incidents/incidents.module';
 import { MatchingModule } from './modules/matching/matching.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { ReputationModule } from './modules/reputation/reputation.module';
 import { TripsModule } from './modules/trips/trips.module';
 
@@ -22,6 +23,7 @@ import { TripsModule } from './modules/trips/trips.module';
     TripsModule,
     OrdersModule,
     CatalogModule,
+    PaymentsModule,
     MatchingModule,
     ReputationModule,
     IncidentsModule,

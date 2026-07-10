@@ -18,6 +18,8 @@ export interface AssignmentListRow {
   orderStatus: string;
   fulfillmentStatus: string | null;
   receivingAddressLine: string | null;
+  /** Señal de confianza: el buyer ya pagó el servicio a Bringo. */
+  servicePaid: boolean;
 }
 
 export interface AssignmentRepository {

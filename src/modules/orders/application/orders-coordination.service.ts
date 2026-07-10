@@ -28,6 +28,7 @@ export interface MatchableOrderView {
   estimatedPriceAmount: number;
   estimatedPriceCurrency: string;
   travelerRewardAmount: number;
+  platformFeeAmount: number;
   neededBy: Date | null;
   status: OrderStatus;
   createdAt: Date;
@@ -77,6 +78,7 @@ export class OrdersCoordinationService {
       estimatedPriceAmount: Number(r.estimatedPriceAmount),
       estimatedPriceCurrency: r.estimatedPriceCurrency,
       travelerRewardAmount: Number(r.travelerRewardAmount),
+      platformFeeAmount: Number(r.platformFeeAmount),
       neededBy: r.neededBy,
       status: r.status as OrderStatus,
       createdAt: r.createdAt,
@@ -190,6 +192,7 @@ export class OrdersCoordinationService {
       estimatedPriceAmount: order.estimatedPriceAmount,
       estimatedPriceCurrency: order.estimatedPriceCurrency,
       travelerRewardAmount: order.travelerRewardAmount,
+      platformFeeAmount: order.platformFeeAmount,
       neededBy: order.neededBy,
       status: order.status,
       createdAt: order.createdAt,

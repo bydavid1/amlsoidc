@@ -105,6 +105,15 @@ export class PrismaAssignmentRepository implements AssignmentRepository {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit,
     });
+    // señal de pago del servicio (lectura cross-módulo pragmática, solo lectura)
+    const paidSet = new Set(
+      (
+        await this.prisma.client.servicePayment.findMany({
+          where: { orderId: { in: rows.map((r) => r.orderId) }, status: { in: ['PAID', 'REFUND_DUE'] } },
+          select: { orderId: true },
+        })
+      ).map((p) => p.orderId),
+    );
     return rows.map((r) => ({
       id: r.id,
       orderId: r.orderId,
@@ -120,6 +129,7 @@ export class PrismaAssignmentRepository implements AssignmentRepository {
       orderStatus: r.order.status,
       fulfillmentStatus: r.order.fulfillment?.status ?? null,
       receivingAddressLine: r.order.fulfillment?.buyerShipsDetail?.travelerAddressLine ?? null,
+      servicePaid: paidSet.has(r.orderId),
     }));
   }
 }
