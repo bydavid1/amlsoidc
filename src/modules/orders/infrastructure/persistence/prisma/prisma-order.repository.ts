@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { Fulfillment as PrismaFulfillment, Order as PrismaOrder } from '@prisma/client';
+import {
+  Fulfillment as PrismaFulfillment,
+  FulfillmentBuyerShipsDetail as PrismaDetail,
+  Order as PrismaOrder,
+} from '@prisma/client';
 import { PrismaService } from '../../../../../core/prisma/prisma.service';
 import { CursorRef } from '../../../../../shared/http/cursor-pagination';
 import { Order, OrderStatus } from '../../../domain/entities/order.entity';
@@ -15,7 +19,7 @@ import {
 } from '../../../domain/repositories/order.repository';
 
 type OrderWithRelations = PrismaOrder & {
-  fulfillment: PrismaFulfillment | null;
+  fulfillment: (PrismaFulfillment & { buyerShipsDetail: PrismaDetail | null }) | null;
   buyerProfile: { userId: string };
 };
 
@@ -41,6 +45,7 @@ function toDomain(row: OrderWithRelations): Order {
           id: row.fulfillment.id,
           type: row.fulfillment.type as FulfillmentType,
           status: row.fulfillment.status as FulfillmentStatus,
+          receivingAddressLine: row.fulfillment.buyerShipsDetail?.travelerAddressLine ?? null,
         }
       : null,
     createdAt: row.createdAt,
@@ -54,7 +59,10 @@ export class PrismaOrderRepository implements OrderRepository {
   async findById(id: string): Promise<Order | null> {
     const row = await this.prisma.client.order.findFirst({
       where: { id, deletedAt: null },
-      include: { fulfillment: true, buyerProfile: { select: { userId: true } } },
+      include: {
+        fulfillment: { include: { buyerShipsDetail: true } },
+        buyerProfile: { select: { userId: true } },
+      },
     });
     return row ? toDomain(row as OrderWithRelations) : null;
   }
@@ -93,8 +101,20 @@ export class PrismaOrderRepository implements OrderRepository {
         },
         update: { status: fulfillment.status },
       });
+      // detalle por tipo: dirección de recepción (modelo hub)
+      await this.prisma.client.fulfillmentBuyerShipsDetail.upsert({
+        where: { fulfillmentId: fulfillment.id },
+        create: {
+          fulfillmentId: fulfillment.id,
+          travelerAddressLine: fulfillment.receivingAddressLine,
+        },
+        update: { travelerAddressLine: fulfillment.receivingAddressLine },
+      });
     } else {
-      // returnToPending eliminó el fulfillment (vuelve a matching limpio)
+      // returnToPending eliminó el fulfillment (el detail cae primero por FK)
+      await this.prisma.client.fulfillmentBuyerShipsDetail.deleteMany({
+        where: { fulfillment: { orderId: order.id } },
+      });
       await this.prisma.client.fulfillment.deleteMany({ where: { orderId: order.id } });
     }
 
@@ -109,6 +129,20 @@ export class PrismaOrderRepository implements OrderRepository {
           actor: t.actor,
         })),
       });
+      // sellar timestamps del sub-flujo en el detail (mismo commit)
+      if (fulfillment) {
+        const sealed: Record<string, Date> = {};
+        for (const t of transitions) {
+          if (t.to === 'fulfillment:PURCHASED') sealed.purchasedAt = new Date();
+          if (t.to === 'fulfillment:RECEIVED_BY_TRAVELER') sealed.receivedByTravelerAt = new Date();
+        }
+        if (Object.keys(sealed).length > 0) {
+          await this.prisma.client.fulfillmentBuyerShipsDetail.updateMany({
+            where: { fulfillmentId: fulfillment.id },
+            data: sealed,
+          });
+        }
+      }
     }
   }
 

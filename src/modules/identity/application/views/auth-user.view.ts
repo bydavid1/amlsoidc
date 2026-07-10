@@ -6,4 +6,8 @@ export interface AuthUserView {
   email: string;
   roles: UserRole[];
   status: UserStatus;
+  firstName: string | null;
+  phone: string | null;
+  /** Modelo hub: Bringo requiere nombre + teléfono antes de operar. */
+  hasCompleteProfile: boolean;
 }

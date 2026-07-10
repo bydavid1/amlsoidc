@@ -10,6 +10,8 @@ export const UserMapper = {
       passwordHash: row.passwordHash,
       status: row.status as UserStatus,
       roles: row.roles as UserRole[],
+      firstName: row.firstName,
+      phone: row.phone,
     });
   },
 
@@ -19,6 +21,8 @@ export const UserMapper = {
     passwordHash: string;
     status: UserStatus;
     roles: UserRole[];
+    firstName: string | null;
+    phone: string | null;
   } {
     return {
       id: user.id,
@@ -26,6 +30,8 @@ export const UserMapper = {
       passwordHash: user.passwordHash,
       status: user.status,
       roles: user.roles,
+      firstName: user.firstName,
+      phone: user.phone,
     };
   },
 };

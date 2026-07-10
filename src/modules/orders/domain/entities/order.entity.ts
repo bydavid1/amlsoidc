@@ -26,6 +26,8 @@ export interface FulfillmentState {
   id: string;
   type: FulfillmentType;
   status: FulfillmentStatus;
+  /** Dirección de recepción del viajero en origen — el buyer la ve ANÓNIMA. */
+  receivingAddressLine: string | null;
 }
 
 export interface StatusTransition {
@@ -103,14 +105,38 @@ export class Order extends AggregateRoot {
       id: fulfillmentId,
       type: strategy.type,
       status: strategy.initialStatus(),
+      receivingAddressLine: null,
     };
     this.toStatus('ASSIGNED', actor, now);
+  }
+
+  /** El viajero registra dónde recibirá el producto (modelo hub, requerido para la compra). */
+  setReceivingAddress(addressLine: string): void {
+    this.requireStatus(['ASSIGNED', 'SOURCING'], 'setReceivingAddress');
+    const f = this.requireFulfillment();
+    const trimmed = addressLine.trim();
+    if (trimmed.length < 10) {
+      throw new DomainError(
+        'RECEIVING_ADDRESS_INVALID',
+        'Receiving address is too short',
+        'UNPROCESSABLE',
+      );
+    }
+    f.receivingAddressLine = trimmed;
   }
 
   /** Buyer compró el producto (sub-flujo) → el backbone entra en SOURCING. */
   confirmPurchase(strategy: FulfillmentStrategy, actor: string, now: Date): void {
     this.requireStatus(['ASSIGNED', 'SOURCING'], 'confirmPurchase');
     const f = this.requireFulfillment();
+    // modelo hub: sin dirección de recepción no hay a dónde enviar el producto
+    if (!f.receivingAddressLine) {
+      throw new DomainError(
+        'RECEIVING_ADDRESS_MISSING',
+        'The traveler has not registered a receiving address yet',
+        'CONFLICT',
+      );
+    }
     f.status = strategy.apply(f.status, 'CONFIRM_PURCHASE');
     this.recordFulfillmentTransition(f.status, actor, now);
     if (this.props.status === 'ASSIGNED') {

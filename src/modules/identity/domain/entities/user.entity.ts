@@ -11,6 +11,8 @@ export interface UserProps {
   passwordHash: string;
   status: UserStatus;
   roles: UserRole[];
+  firstName: string | null;
+  phone: string | null;
 }
 
 /**
@@ -29,6 +31,8 @@ export class User extends AggregateRoot {
       passwordHash: input.passwordHash,
       status: 'ACTIVE',
       roles: [],
+      firstName: null,
+      phone: null,
     });
     user.record(new UserRegisteredEvent(input.now, { userId: input.id, email: input.email }));
     return user;
@@ -37,6 +41,24 @@ export class User extends AggregateRoot {
   /** Rehidratación desde persistencia (solo mappers de infraestructura). */
   static restore(props: UserProps): User {
     return new User(props);
+  }
+
+  /** Perfil mínimo del modelo hub: Bringo necesita nombre y teléfono de ambos actores. */
+  updateProfile(input: { firstName: string; phone: string }): void {
+    const firstName = input.firstName.trim();
+    const phone = input.phone.trim();
+    if (firstName.length < 2) {
+      throw new DomainError('PROFILE_NAME_INVALID', 'First name is too short', 'UNPROCESSABLE');
+    }
+    if (!/^\+?[0-9\s-]{8,20}$/.test(phone)) {
+      throw new DomainError('PROFILE_PHONE_INVALID', 'Phone number is not valid', 'UNPROCESSABLE');
+    }
+    this.props.firstName = firstName;
+    this.props.phone = phone;
+  }
+
+  get hasCompleteProfile(): boolean {
+    return this.props.firstName !== null && this.props.phone !== null;
   }
 
   addRole(role: UserRole): void {
@@ -70,6 +92,12 @@ export class User extends AggregateRoot {
   }
   get roles(): UserRole[] {
     return [...this.props.roles];
+  }
+  get firstName(): string | null {
+    return this.props.firstName;
+  }
+  get phone(): string | null {
+    return this.props.phone;
   }
 
   hasRole(role: UserRole): boolean {

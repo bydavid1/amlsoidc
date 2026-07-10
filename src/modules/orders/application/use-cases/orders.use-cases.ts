@@ -14,6 +14,10 @@ import {
   CorridorPolicy,
 } from '../../../geography/domain/services/corridor-policy';
 import { IdentityAccessService } from '../../../identity/application/identity-access.service';
+import {
+  MatchingReadService,
+  TravelerPublicInfo,
+} from '../../../matching/application/matching-read.service';
 import { Order, OrderStatus } from '../../domain/entities/order.entity';
 import { FulfillmentStrategyResolver } from '../../domain/fulfillment/fulfillment-strategy';
 import {
@@ -84,9 +88,20 @@ export class CreateOrderUseCase {
     @Inject(EVENT_BUS) private readonly eventBus: EventBus,
     @Inject(ID_GENERATOR) private readonly ids: IdGenerator,
     @Inject(CLOCK) private readonly clock: Clock,
+    private readonly identityAccess: IdentityAccessService,
   ) {}
 
   async execute(command: CreateOrderCommand): Promise<Order> {
+    // modelo hub: Bringo necesita poder contactar al comprador
+    const identity = await this.identityAccess.getAuthUser(command.userId);
+    if (!identity?.hasCompleteProfile) {
+      throw new DomainError(
+        'PROFILE_INCOMPLETE',
+        'Complete your profile (name and phone) before creating orders',
+        'FORBIDDEN',
+      );
+    }
+
     const profile = await this.profiles.findByUserId(command.userId);
     if (!profile) {
       throw new DomainError(
@@ -238,15 +253,21 @@ export class ListMyOrdersUseCase {
 
 @Injectable()
 export class GetMyOrderUseCase {
-  constructor(@Inject(ORDER_REPOSITORY) private readonly orders: OrderRepository) {}
+  constructor(
+    @Inject(ORDER_REPOSITORY) private readonly orders: OrderRepository,
+    // forwardRef en el módulo: matching es el hub y exporta esta lectura
+    private readonly matchingRead: MatchingReadService,
+  ) {}
 
   async execute(
     userId: string,
     orderId: string,
-  ): Promise<{ order: Order; timeline: StatusHistoryRow[] }> {
+  ): Promise<{ order: Order; timeline: StatusHistoryRow[]; traveler: TravelerPublicInfo | null }> {
     const order = await loadOwnedOrder(this.orders, userId, orderId);
     const timeline = await this.orders.getStatusHistory(orderId);
-    return { order, timeline };
+    // percepción sin contacto: solo nombre de pila + reputación del viajero
+    const traveler = await this.matchingRead.getAssignedTravelerPublicInfo(orderId);
+    return { order, timeline, traveler };
   }
 }
 

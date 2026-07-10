@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { MatchingModule } from '../matching/matching.module';
 import { OrdersModule } from '../orders/orders.module';
 import { TripsModule } from '../trips/trips.module';
-import { RateCounterpartUseCase } from './application/use-cases/rate-counterpart.use-case';
+import { RateExperienceUseCase, RateTravelerByOperatorUseCase } from './application/use-cases/rate-counterpart.use-case';
 import { RATING_REPOSITORY } from './domain/repositories/rating.repository';
 import { PrismaRatingRepository } from './infrastructure/persistence/prisma/prisma-rating.repository';
 import { RatingsController } from './interface/http/controllers/ratings.controller';
@@ -13,7 +13,10 @@ import { RatingsController } from './interface/http/controllers/ratings.controll
   controllers: [RatingsController],
   providers: [
     { provide: RATING_REPOSITORY, useClass: PrismaRatingRepository },
-    RateCounterpartUseCase,
+    RateExperienceUseCase,
+    RateTravelerByOperatorUseCase,
   ],
+  // admin compone la puntuación del operador al confirmar recepción en hub
+  exports: [RateTravelerByOperatorUseCase],
 })
 export class ReputationModule {}

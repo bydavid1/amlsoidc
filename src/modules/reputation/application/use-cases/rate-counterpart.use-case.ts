@@ -13,7 +13,7 @@ import {
   RatingRepository,
 } from '../../domain/repositories/rating.repository';
 
-export interface RateCounterpartCommand {
+export interface RateExperienceCommand {
   userId: string;
   orderId: string;
   score: number;
@@ -21,13 +21,13 @@ export interface RateCounterpartCommand {
 }
 
 /**
- * Calificación mutua tras DELIVERED (docs/design/01-dominio.md): cuando ambas
- * partes califican, el pedido pasa a COMPLETED. Si el calificado es el
- * Traveler, se recalcula su reputación y se publica el snapshot (el matching
- * lo consume vía el cache en TravelerProfile).
+ * MODELO HUB: solo el BUYER califica (su experiencia con la entrega); la
+ * calificación alimenta internamente la reputación del traveler y COMPLETA
+ * el pedido. El buyer nunca conoce al traveler, así que no hay calificación
+ * mutua (el operador de Bringo puntúa al traveler al recibir en el hub).
  */
 @Injectable()
-export class RateCounterpartUseCase {
+export class RateExperienceUseCase {
   constructor(
     @Inject(RATING_REPOSITORY) private readonly ratings: RatingRepository,
     @Inject(UNIT_OF_WORK) private readonly uow: UnitOfWork,
@@ -39,13 +39,14 @@ export class RateCounterpartUseCase {
     private readonly matchingRead: MatchingReadService,
   ) {}
 
-  async execute(command: RateCounterpartCommand): Promise<{ completed: boolean }> {
+  async execute(command: RateExperienceCommand): Promise<{ completed: boolean }> {
     if (!Number.isInteger(command.score) || command.score < 1 || command.score > 5) {
       throw new DomainError('RATING_SCORE_INVALID', 'Score must be 1..5', 'UNPROCESSABLE');
     }
 
     const order = await this.ordersCoordination.getMatchableOrder(command.orderId);
-    if (!order) {
+    // 404 también si no es el buyer: no revelar pedidos ajenos
+    if (!order || order.buyerUserId !== command.userId) {
       throw new DomainError('NOT_FOUND', 'Order not found', 'NOT_FOUND');
     }
     if (order.status !== 'DELIVERED') {
@@ -56,25 +57,9 @@ export class RateCounterpartUseCase {
       );
     }
 
-    // participantes: Buyer del pedido y Traveler del assignment aceptado
-    const travelerProfileId = await this.matchingRead.getAcceptedTravelerProfileId(
-      command.orderId,
-    );
-    const travelerUserId = travelerProfileId
-      ? await this.tripsCoordination.getTravelerUserId(travelerProfileId)
-      : null;
+    const travelerUserId = await this.resolveTravelerUserId(command.orderId);
     if (!travelerUserId) {
-      throw new DomainError('ORDER_NOT_RATEABLE', 'Order has no accepted traveler', 'CONFLICT');
-    }
-
-    let rateeUserId: string;
-    if (command.userId === order.buyerUserId) {
-      rateeUserId = travelerUserId;
-    } else if (command.userId === travelerUserId) {
-      rateeUserId = order.buyerUserId;
-    } else {
-      // 404: no revelar la existencia de pedidos ajenos
-      throw new DomainError('NOT_FOUND', 'Order not found', 'NOT_FOUND');
+      throw new DomainError('ORDER_NOT_RATEABLE', 'Order has no assigned traveler', 'CONFLICT');
     }
 
     if (await this.ratings.existsByOrderAndRater(command.orderId, command.userId)) {
@@ -82,45 +67,104 @@ export class RateCounterpartUseCase {
     }
 
     const now = this.clock.now();
-    const completed = await this.uow.execute(async () => {
+    await this.uow.execute(async () => {
       await this.ratings.create({
         id: this.ids.next(),
         orderId: command.orderId,
         raterUserId: command.userId,
-        rateeUserId,
+        rateeUserId: travelerUserId,
         score: command.score,
         comment: command.comment,
       });
-      const count = await this.ratings.countForOrder(command.orderId);
-      if (count >= 2) {
-        await this.ordersCoordination.completeOrder(command.orderId, 'system:both-rated');
-        return true;
-      }
-      return false;
+      // la calificación del buyer cierra el ciclo del pedido
+      await this.ordersCoordination.completeOrder(command.orderId, 'system:buyer-rated');
     });
 
-    const events: (RatingCreatedEvent | ReputationUpdatedEvent)[] = [
+    await this.publishReputationEvents(command, travelerUserId, now);
+    return { completed: true };
+  }
+
+  private async resolveTravelerUserId(orderId: string): Promise<string | null> {
+    const profileId = await this.matchingRead.getAcceptedTravelerProfileId(orderId);
+    return profileId ? this.tripsCoordination.getTravelerUserId(profileId) : null;
+  }
+
+  private async publishReputationEvents(
+    command: RateExperienceCommand,
+    travelerUserId: string,
+    now: Date,
+  ): Promise<void> {
+    const aggregate = await this.ratings.aggregateForRatee(travelerUserId);
+    await this.eventBus.publishAll([
       new RatingCreatedEvent(now, {
         orderId: command.orderId,
         raterUserId: command.userId,
-        rateeUserId,
+        rateeUserId: travelerUserId,
         score: command.score,
       }),
-    ];
+      new ReputationUpdatedEvent(now, {
+        userId: travelerUserId,
+        average: aggregate.average,
+        count: aggregate.count,
+      }),
+    ]);
+  }
+}
 
-    // el snapshot de reputación solo aplica al Traveler (influye en el matching)
-    if (rateeUserId === travelerUserId) {
-      const aggregate = await this.ratings.aggregateForRatee(rateeUserId);
-      events.push(
-        new ReputationUpdatedEvent(now, {
-          userId: rateeUserId,
-          average: aggregate.average,
-          count: aggregate.count,
-        }),
-      );
+export interface RateTravelerByOperatorCommand {
+  adminUserId: string;
+  orderId: string;
+  score: number;
+  note: string | null;
+}
+
+/**
+ * El operador de Bringo puntúa al traveler al confirmar la recepción en el
+ * hub (puntualidad, estado del paquete). Alimenta la misma reputación; NO
+ * completa el pedido.
+ */
+@Injectable()
+export class RateTravelerByOperatorUseCase {
+  constructor(
+    @Inject(RATING_REPOSITORY) private readonly ratings: RatingRepository,
+    @Inject(EVENT_BUS) private readonly eventBus: EventBus,
+    @Inject(ID_GENERATOR) private readonly ids: IdGenerator,
+    @Inject(CLOCK) private readonly clock: Clock,
+    private readonly tripsCoordination: TripsCoordinationService,
+    private readonly matchingRead: MatchingReadService,
+  ) {}
+
+  async execute(command: RateTravelerByOperatorCommand): Promise<void> {
+    if (!Number.isInteger(command.score) || command.score < 1 || command.score > 5) {
+      throw new DomainError('RATING_SCORE_INVALID', 'Score must be 1..5', 'UNPROCESSABLE');
     }
-    await this.eventBus.publishAll(events);
+    const profileId = await this.matchingRead.getAcceptedTravelerProfileId(command.orderId);
+    const travelerUserId = profileId
+      ? await this.tripsCoordination.getTravelerUserId(profileId)
+      : null;
+    if (!travelerUserId) {
+      throw new DomainError('ORDER_NOT_RATEABLE', 'Order has no assigned traveler', 'CONFLICT');
+    }
+    if (await this.ratings.existsByOrderAndRater(command.orderId, command.adminUserId)) {
+      return; // idempotente: el operador ya puntuó este encargo
+    }
 
-    return { completed };
+    const now = this.clock.now();
+    await this.ratings.create({
+      id: this.ids.next(),
+      orderId: command.orderId,
+      raterUserId: command.adminUserId,
+      rateeUserId: travelerUserId,
+      score: command.score,
+      comment: command.note,
+    });
+    const aggregate = await this.ratings.aggregateForRatee(travelerUserId);
+    await this.eventBus.publishAll([
+      new ReputationUpdatedEvent(now, {
+        userId: travelerUserId,
+        average: aggregate.average,
+        count: aggregate.count,
+      }),
+    ]);
   }
 }

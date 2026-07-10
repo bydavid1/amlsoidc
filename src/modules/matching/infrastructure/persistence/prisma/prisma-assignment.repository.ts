@@ -93,7 +93,12 @@ export class PrismaAssignmentRepository implements AssignmentRepository {
             travelerRewardAmount: true,
             destinationCityId: true,
             status: true,
-            fulfillment: { select: { status: true } },
+            fulfillment: {
+              select: {
+                status: true,
+                buyerShipsDetail: { select: { travelerAddressLine: true } },
+              },
+            },
           },
         },
       },
@@ -114,6 +119,7 @@ export class PrismaAssignmentRepository implements AssignmentRepository {
       destinationCityId: r.order.destinationCityId,
       orderStatus: r.order.status,
       fulfillmentStatus: r.order.fulfillment?.status ?? null,
+      receivingAddressLine: r.order.fulfillment?.buyerShipsDetail?.travelerAddressLine ?? null,
     }));
   }
 }

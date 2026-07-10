@@ -30,6 +30,8 @@ export class PrismaUserRepository implements UserRepository {
         passwordHash: data.passwordHash,
         status: data.status,
         roles: { set: data.roles },
+        firstName: data.firstName,
+        phone: data.phone,
       },
     });
   }

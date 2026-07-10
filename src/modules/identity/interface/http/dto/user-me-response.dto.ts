@@ -12,4 +12,13 @@ export class UserMeResponseDto {
 
   @ApiProperty({ example: 'ACTIVE', enum: ['ACTIVE', 'SUSPENDED'] })
   status: string;
+
+  @ApiProperty({ nullable: true, example: 'Carlos' })
+  firstName: string | null;
+
+  @ApiProperty({ nullable: true, example: '+503 7777 8888' })
+  phone: string | null;
+
+  @ApiProperty({ description: 'Nombre + teléfono registrados (requerido para operar)' })
+  hasCompleteProfile: boolean;
 }

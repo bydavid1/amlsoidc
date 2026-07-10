@@ -192,7 +192,31 @@ export class OrderTimelineEntryDto {
   }
 }
 
+export class TravelerPublicDto {
+  @ApiProperty({ nullable: true, example: 'Carlos' })
+  firstName: string | null;
+
+  @ApiProperty({ example: 4.9 })
+  reputationScore: number;
+
+  @ApiProperty({ example: 12 })
+  reputationCount: number;
+}
+
 export class OrderDetailResponseDto extends OrderResponseDto {
   @ApiProperty({ type: OrderTimelineEntryDto, isArray: true })
   timeline: OrderTimelineEntryDto[];
+
+  @ApiProperty({
+    type: TravelerPublicDto,
+    nullable: true,
+    description: 'Percepción sin contacto: solo nombre de pila + reputación',
+  })
+  traveler: TravelerPublicDto | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: 'Dirección (anónima) a la que el Buyer envía el producto',
+  })
+  receivingAddress: string | null;
 }

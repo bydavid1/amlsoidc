@@ -94,9 +94,11 @@ export class OrdersController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) orderId: string,
   ): Promise<OrderDetailResponseDto> {
-    const { order, timeline } = await this.getMyOrder.execute(user.id, orderId);
+    const { order, timeline, traveler } = await this.getMyOrder.execute(user.id, orderId);
     const dto = OrderResponseDto.from(order) as OrderDetailResponseDto;
     dto.timeline = timeline.map(OrderTimelineEntryDto.from);
+    dto.traveler = traveler;
+    dto.receivingAddress = order.fulfillment?.receivingAddressLine ?? null;
     return dto;
   }
 

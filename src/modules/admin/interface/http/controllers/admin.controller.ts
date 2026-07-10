@@ -25,6 +25,7 @@ import {
   IsString,
   IsUrl,
   IsUUID,
+  Max,
   MaxLength,
   Min,
   MinLength,
@@ -33,7 +34,9 @@ import {
   CatalogService,
   CreateRecommendedProductInput,
 } from '../../../../catalog/application/catalog.service';
+import { OrdersCoordinationService } from '../../../../orders/application/orders-coordination.service';
 import { SizeCategory } from '../../../../orders/domain/services/pricing-policy';
+import { RateTravelerByOperatorUseCase } from '../../../../reputation/application/use-cases/rate-counterpart.use-case';
 import { AuthenticatedUser } from '../../../../../shared/auth/authenticated-user';
 import { CurrentUser, Roles } from '../../../../../shared/auth/decorators';
 import { CursorPaginationDto } from '../../../../../shared/http/cursor-pagination';
@@ -97,6 +100,26 @@ class CreateRecommendedProductDto implements CreateRecommendedProductInput {
   sortOrder?: number;
 }
 
+class ConfirmHubReceptionDto {
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 5,
+    description: 'Puntuación del viajero por el operador (puntualidad, estado del paquete)',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  travelerScore?: number;
+
+  @ApiPropertyOptional({ example: 'Paquete en perfecto estado, llegó puntual' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
+}
+
 class ResolveDisputeDto {
   @ApiProperty({ enum: ['RESOLVED', 'REJECTED'] })
   @IsEnum(['RESOLVED', 'REJECTED'])
@@ -125,7 +148,32 @@ export class AdminController {
     private readonly resolveDispute: ResolveDisputeUseCase,
     private readonly listDisputes: ListDisputesUseCase,
     private readonly catalog: CatalogService,
+    private readonly ordersCoordination: OrdersCoordinationService,
+    private readonly rateTraveler: RateTravelerByOperatorUseCase,
   ) {}
+
+  @Post('orders/:id/confirm-hub-reception')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'MODELO HUB: el operador confirma que el viajero entregó el paquete en el punto Bringo (Order → READY_FOR_DELIVERY). Opcionalmente puntúa al viajero.',
+  })
+  async confirmHubReception(
+    @CurrentUser() admin: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) orderId: string,
+    @Body() dto: ConfirmHubReceptionDto,
+  ): Promise<{ ok: true }> {
+    await this.ordersCoordination.confirmHubReception(orderId, `admin:${admin.id}`);
+    if (dto.travelerScore) {
+      await this.rateTraveler.execute({
+        adminUserId: admin.id,
+        orderId,
+        score: dto.travelerScore,
+        note: dto.note ?? null,
+      });
+    }
+    return { ok: true };
+  }
 
   @Post('recommended-products')
   @ApiOperation({ summary: 'Publicar un producto recomendado (curaduría)' })

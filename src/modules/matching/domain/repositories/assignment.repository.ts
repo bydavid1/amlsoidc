@@ -17,6 +17,7 @@ export interface AssignmentListRow {
   destinationCityId: string;
   orderStatus: string;
   fulfillmentStatus: string | null;
+  receivingAddressLine: string | null;
 }
 
 export interface AssignmentRepository {

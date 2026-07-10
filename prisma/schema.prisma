@@ -24,6 +24,10 @@ model User {
   passwordHash String
   status       UserStatus @default(ACTIVE)
   roles        UserRole[]
+  // perfil mínimo (modelo hub): Bringo necesita contactar a ambos actores.
+  // El buyer solo ve el firstName del traveler (percepción, nunca contacto).
+  firstName    String?
+  phone        String?
 
   buyerProfile    BuyerProfile?
   travelerProfile TravelerProfile?

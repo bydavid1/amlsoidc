@@ -65,9 +65,20 @@ export class CreateTripUseCase {
     @Inject(CORRIDOR_POLICY) private readonly corridors: CorridorPolicy,
     @Inject(ID_GENERATOR) private readonly ids: IdGenerator,
     @Inject(CLOCK) private readonly clock: Clock,
+    private readonly identityAccess: IdentityAccessService,
   ) {}
 
   async execute(command: CreateTripCommand): Promise<Trip> {
+    // modelo hub: Bringo necesita poder contactar al viajero
+    const identity = await this.identityAccess.getAuthUser(command.userId);
+    if (!identity?.hasCompleteProfile) {
+      throw new DomainError(
+        'PROFILE_INCOMPLETE',
+        'Complete your profile (name and phone) before publishing trips',
+        'FORBIDDEN',
+      );
+    }
+
     const profile = await this.requireProfile(command.userId);
 
     const enabled = await this.corridors.isEnabled(

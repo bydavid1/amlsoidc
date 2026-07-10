@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { AssignmentAcceptedEvent } from '../../matching/domain/events/assignment.events';
+import { MatchingReadService } from '../../matching/application/matching-read.service';
 import { OrderStatusChangedEvent } from '../../orders/domain/events/order.events';
 import { OrdersCoordinationService } from '../../orders/application/orders-coordination.service';
 import { NotificationsService } from './notifications.service';
@@ -29,16 +30,21 @@ export class NotificationsListener {
   constructor(
     private readonly notifications: NotificationsService,
     private readonly ordersCoordination: OrdersCoordinationService,
+    private readonly matchingRead: MatchingReadService,
   ) {}
 
-  /** Un viajero reclamó el encargo → avisar al Buyer. */
+  /** Un viajero reclamó el encargo → avisar al Buyer con NOMBRE (narrativa Uber). */
   @OnEvent(AssignmentAcceptedEvent.EVENT_NAME, { promisify: true })
   async onAccepted(event: AssignmentAcceptedEvent): Promise<void> {
     await this.safely(async () => {
       const order = await this.ordersCoordination.getMatchableOrder(event.payload.orderId);
       if (order) {
+        const traveler = await this.matchingRead.getAssignedTravelerPublicInfo(
+          event.payload.orderId,
+        );
         await this.notifications.notify(order.buyerUserId, 'TRAVELER_ASSIGNED', {
           orderId: event.payload.orderId,
+          travelerFirstName: traveler?.firstName ?? null,
         });
       }
     });
@@ -52,10 +58,15 @@ export class NotificationsListener {
     await this.safely(async () => {
       const order = await this.ordersCoordination.getMatchableOrder(event.payload.orderId);
       if (order) {
+        // el relato mantiene al viajero como protagonista ("Carlos va en camino")
+        const traveler = await this.matchingRead.getAssignedTravelerPublicInfo(
+          event.payload.orderId,
+        );
         await this.notifications.notify(order.buyerUserId, 'ORDER_STATUS_CHANGED', {
           orderId: event.payload.orderId,
           from: event.payload.from,
           to: event.payload.to,
+          travelerFirstName: traveler?.firstName ?? null,
         });
       }
     });

@@ -38,6 +38,23 @@ export class IdentityAccessService {
     return valid ? this.toView(user) : null;
   }
 
+  /** Actualiza el perfil mínimo (modelo hub: nombre + teléfono). */
+  async updateProfile(
+    userId: string,
+    input: { firstName: string; phone: string },
+  ): Promise<AuthUserView> {
+    const user = await this.requireUser(userId);
+    user.updateProfile(input);
+    await this.users.save(user);
+    return this.toView(user);
+  }
+
+  /** Vista PÚBLICA de un usuario (percepción sin contacto): solo nombre de pila. */
+  async getPublicFirstName(userId: string): Promise<string | null> {
+    const user = await this.users.findById(userId);
+    return user?.firstName ?? null;
+  }
+
   /** Otorga un rol (activación de perfil Buyer/Traveler). Idempotente. */
   async grantRole(userId: string, role: UserRole): Promise<AuthUserView> {
     const user = await this.users.findById(userId);
@@ -73,6 +90,14 @@ export class IdentityAccessService {
   }
 
   private toView(user: User): AuthUserView {
-    return { id: user.id, email: user.email, roles: user.roles, status: user.status };
+    return {
+      id: user.id,
+      email: user.email,
+      roles: user.roles,
+      status: user.status,
+      firstName: user.firstName,
+      phone: user.phone,
+      hasCompleteProfile: user.hasCompleteProfile,
+    };
   }
 }

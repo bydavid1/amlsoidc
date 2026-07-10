@@ -105,8 +105,17 @@ export class OrdersCoordinationService {
     });
   }
 
-  markArrived(orderId: string, actor: string): Promise<void> {
+  /**
+   * Modelo hub: la "llegada" del pedido a READY_FOR_DELIVERY la confirma
+   * BRINGO al recibir el paquete en el punto (no el traveler).
+   */
+  confirmHubReception(orderId: string, actor: string): Promise<void> {
     return this.mutate(orderId, (order) => order.markArrived(actor, this.clock.now()));
+  }
+
+  /** El traveler registra dónde recibirá el producto (requerido para la compra). */
+  setReceivingAddress(orderId: string, addressLine: string): Promise<void> {
+    return this.mutate(orderId, (order) => order.setReceivingAddress(addressLine));
   }
 
   returnToPending(orderId: string, actor: string): Promise<void> {

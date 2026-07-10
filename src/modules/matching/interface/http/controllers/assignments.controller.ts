@@ -1,10 +1,32 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { IsString, MaxLength, MinLength } from 'class-validator';
 import { AuthenticatedUser } from '../../../../../shared/auth/authenticated-user';
 import { CurrentUser, Roles } from '../../../../../shared/auth/decorators';
 import { CursorPaginationDto } from '../../../../../shared/http/cursor-pagination';
 import { AssignmentResponseService } from '../../../application/use-cases/assignment-response.use-cases';
 import { AssignmentListItemDto } from '../dto/assignments.dto';
+
+export class SetReceivingAddressDto {
+  @ApiProperty({
+    example: '2345 NW 107th Ave, Doral, FL 33172',
+    description: 'El buyer la verá SIN datos personales del traveler',
+  })
+  @IsString()
+  @MinLength(10)
+  @MaxLength(300)
+  addressLine: string;
+}
 
 /**
  * Encargos ya reclamados por el Traveler: listado + avance físico del
@@ -49,14 +71,17 @@ export class AssignmentsController {
     return { ok: true };
   }
 
-  @Post(':id/mark-arrived')
+  @Post(':id/set-receiving-address')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'El Traveler llegó al destino (Order → READY_FOR_DELIVERY)' })
-  async markArrived(
+  @ApiOperation({
+    summary: 'Registrar la dirección donde el Traveler recibirá el producto (modelo hub)',
+  })
+  async setReceivingAddress(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetReceivingAddressDto,
   ): Promise<{ ok: true }> {
-    await this.service.markArrived(user.id, id);
+    await this.service.setReceivingAddress(user.id, id, dto.addressLine);
     return { ok: true };
   }
 }

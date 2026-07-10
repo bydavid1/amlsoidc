@@ -34,9 +34,14 @@ export class AssignmentResponseService {
     await this.ordersCoordination.markInTransit(a.orderId, `traveler:${userId}`);
   }
 
-  async markArrived(userId: string, assignmentId: string): Promise<void> {
+  /** Modelo hub: el traveler registra su dirección de recepción en origen. */
+  async setReceivingAddress(
+    userId: string,
+    assignmentId: string,
+    addressLine: string,
+  ): Promise<void> {
     const a = await this.loadOwnedAccepted(userId, assignmentId);
-    await this.ordersCoordination.markArrived(a.orderId, `traveler:${userId}`);
+    await this.ordersCoordination.setReceivingAddress(a.orderId, addressLine);
   }
 
   async listMine(userId: string, limit: number): Promise<AssignmentListRow[]> {

@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiProperty, ApiPropertyOpt
 import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { AuthenticatedUser } from '../../../../../shared/auth/authenticated-user';
 import { CurrentUser } from '../../../../../shared/auth/decorators';
-import { RateCounterpartUseCase } from '../../../application/use-cases/rate-counterpart.use-case';
+import { RateExperienceUseCase } from '../../../application/use-cases/rate-counterpart.use-case';
 
 export class CreateRatingDto {
   @ApiProperty({ example: 5, minimum: 1, maximum: 5 })
@@ -29,12 +29,12 @@ export class RatingResultDto {
 @ApiBearerAuth()
 @Controller('orders/:orderId/ratings')
 export class RatingsController {
-  constructor(private readonly rateCounterpart: RateCounterpartUseCase) {}
+  constructor(private readonly rateExperience: RateExperienceUseCase) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Calificar a la contraparte (solo tras DELIVERED; con ambas → COMPLETED)',
+    summary: 'El Buyer califica su experiencia (solo tras DELIVERED; completa el pedido)',
   })
   @ApiOkResponse({ type: RatingResultDto })
   execute(
@@ -42,7 +42,7 @@ export class RatingsController {
     @Param('orderId', ParseUUIDPipe) orderId: string,
     @Body() dto: CreateRatingDto,
   ): Promise<RatingResultDto> {
-    return this.rateCounterpart.execute({
+    return this.rateExperience.execute({
       userId: user.id,
       orderId,
       score: dto.score,

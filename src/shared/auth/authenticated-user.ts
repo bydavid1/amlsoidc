@@ -6,4 +6,7 @@ export interface AuthenticatedUser {
   email: string;
   roles: Role[];
   status: 'ACTIVE' | 'SUSPENDED';
+  firstName?: string | null;
+  phone?: string | null;
+  hasCompleteProfile?: boolean;
 }
