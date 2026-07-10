@@ -115,6 +115,12 @@ export class AdminPayoutsController {
     return this.payments.listPayouts(query.status, query.limit);
   }
 
+  @Get('refunds')
+  @ApiOperation({ summary: 'Reembolsos pendientes al comprador (pedidos cancelados pagados)' })
+  refunds(@Query() query: ListPayoutsQueryDto): Promise<unknown> {
+    return this.payments.listRefunds(query.limit);
+  }
+
   @Post('payouts/:paymentId/mark-paid')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Payout ejecutado (efectivo/transferencia al viajero)' })

@@ -21,4 +21,7 @@ export interface ServicePaymentRepository {
   save(payment: ServicePayment): Promise<void>;
   /** Cola de payouts para el operador (admin SÍ ve contacto del viajero). */
   listPayouts(status: PayoutStatus | undefined, limit: number): Promise<PayoutRow[]>;
+  listRefundsDue(
+    limit: number,
+  ): Promise<{ paymentId: string; orderId: string; amount: number; currency: string }[]>;
 }

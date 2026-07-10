@@ -163,6 +163,12 @@ export class PaymentsService {
 
   // -------- operación (admin) --------
 
+  /** Reembolsos pendientes (pedidos cancelados con servicio pagado). */
+  async listRefunds(limit: number): Promise<{ paymentId: string; orderId: string; amount: number; currency: string }[]> {
+    const rows = await this.payments.listRefundsDue(limit);
+    return rows;
+  }
+
   listPayouts(status: 'DUE' | 'PAID_OUT' | undefined, limit: number): Promise<PayoutRow[]> {
     return this.payments.listPayouts(status, limit);
   }

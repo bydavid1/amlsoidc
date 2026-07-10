@@ -66,6 +66,22 @@ export class PrismaServicePaymentRepository implements ServicePaymentRepository 
     });
   }
 
+  async listRefundsDue(
+    limit: number,
+  ): Promise<{ paymentId: string; orderId: string; amount: number; currency: string }[]> {
+    const rows = await this.prisma.client.servicePayment.findMany({
+      where: { status: 'REFUND_DUE' },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+    });
+    return rows.map((p) => ({
+      paymentId: p.id,
+      orderId: p.orderId,
+      amount: Number(p.amount),
+      currency: p.currency,
+    }));
+  }
+
   async listPayouts(status: PayoutStatus | undefined, limit: number): Promise<PayoutRow[]> {
     const payments = await this.prisma.client.servicePayment.findMany({
       where: status ? { payoutStatus: status } : { payoutStatus: { not: 'NOT_DUE' } },

@@ -56,6 +56,13 @@ class AdminListOrdersQueryDto extends CursorPaginationDto {
   status?: string;
 }
 
+class AdminListUsersQueryDto extends CursorPaginationDto {
+  @ApiPropertyOptional({ description: 'Buscar por email, nombre o teléfono' })
+  @IsOptional()
+  @IsString()
+  q?: string;
+}
+
 class AdminListDisputesQueryDto extends CursorPaginationDto {
   @ApiPropertyOptional({ enum: ['OPEN', 'UNDER_REVIEW', 'RESOLVED', 'REJECTED'] })
   @IsOptional()
@@ -212,6 +219,12 @@ export class AdminController {
     @Body() dto: ResolveDisputeDto,
   ): Promise<unknown> {
     return this.resolveDispute.execute(admin.id, disputeId, dto.resolution, dto.orderOutcome);
+  }
+
+  @Get('users')
+  @ApiOperation({ summary: 'Buscar usuarios (email/nombre/teléfono)' })
+  users(@Query() query: AdminListUsersQueryDto): Promise<unknown> {
+    return this.queries.listUsers(query.q, query.limit);
   }
 
   @Post('users/:id/suspend')

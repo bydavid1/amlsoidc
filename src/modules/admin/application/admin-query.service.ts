@@ -24,9 +24,49 @@ export interface AdminOrderRow {
  * el módulo admin no contiene lógica de negocio propia
  * (docs/design/02-arquitectura.md).
  */
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  firstName: string | null;
+  phone: string | null;
+  roles: string[];
+  status: string;
+  createdAt: Date;
+}
+
 @Injectable()
 export class AdminQueryService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Búsqueda de usuarios para operación/soporte (admin ve contacto). */
+  async listUsers(query: string | undefined, limit: number): Promise<AdminUserRow[]> {
+    const rows = await this.prisma.client.user.findMany({
+      where: {
+        deletedAt: null,
+        ...(query
+          ? {
+              OR: [
+                { email: { contains: query, mode: 'insensitive' } },
+                { firstName: { contains: query, mode: 'insensitive' } },
+                { phone: { contains: query } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        phone: true,
+        roles: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+    return rows;
+  }
 
   async listOrders(status: string | undefined, limit: number): Promise<AdminOrderRow[]> {
     const rows = await this.prisma.client.order.findMany({
